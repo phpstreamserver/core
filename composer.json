@@ -1,0 +1,60 @@
+{
+    "name": "phpstreamserver/core",
+    "description": "PHPStreamServer is a high performance PHP application server",
+    "keywords": ["phpstreamserver", "async", "server", "process", "socket", "stream"],
+    "homepage": "https://phpstreamserver.dev",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Anton Zenkov",
+            "email": "anton.z@live.com",
+            "homepage": "https://github.com/luzrain/",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "ext-pcntl": "*",
+        "ext-posix": "*",
+        "amphp/amp": "^3.0.2",
+        "amphp/byte-stream": "^2.1.1",
+        "amphp/socket": "^2.3.1",
+        "psr/container": "^2.0",
+        "psr/log": "^3.0",
+        "revolt/event-loop": "^1.0.6"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.60.0",
+        "guzzlehttp/guzzle": "^7.9.2",
+        "phpunit/phpunit": "^10.5.28",
+        "psalm/phar": "^5.25",
+        "symfony/var-dumper": "^6.4.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "PHPStreamServer\\Core\\": "src/"
+        },
+        "files": [
+            "src/functions.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PHPStreamServer\\Core\\Test\\": "tests/"
+        }
+    },
+    "suggest": {
+        "ext-uv": "For better performance"
+    },
+    "scripts": {
+        "test": [
+            "vendor/bin/php-cs-fixer fix -v --dry-run",
+            "vendor/bin/psalm",
+            "vendor/bin/phpunit"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
