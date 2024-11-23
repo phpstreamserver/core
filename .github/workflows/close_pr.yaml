@@ -1,0 +1,22 @@
+name: Close Pull Request
+
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+        - name: Close Pull Request
+          run: gh pr close "${{ github.event.number }}" --repo "${{ github.repository }}" --comment "$COMMENT"
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            COMMENT: |
+              Thank you for your pull request.
+              However, you have submitted this PR on a read-only sub split of `phpstreamserver/phpstreamserver`.
+              Please submit your PR on the https://github.com/phpstreamserver/phpstreamserver repository.
+              
+              Thanks!
