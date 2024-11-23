@@ -9,7 +9,6 @@ use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Worker\ContainerInterface;
 use PHPStreamServer\Core\Worker\Status;
-use function Amp\async;
 
 abstract class Plugin
 {
@@ -65,7 +64,7 @@ abstract class Plugin
      */
     public function onStop(): Future
     {
-        return async(static fn() => null);
+        return Future::complete();
     }
 
     /**
