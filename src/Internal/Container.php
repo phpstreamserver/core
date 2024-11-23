@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal;
 
+use PHPStreamServer\Core\Exception\ServiceNotFoundException;
 use PHPStreamServer\Core\Worker\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
@@ -57,8 +58,7 @@ final class Container implements ContainerInterface
             return $value;
         }
 
-        $message = \sprintf('"%s" is not registered in container', $id);
-        throw new class($message) extends \InvalidArgumentException implements NotFoundExceptionInterface {};
+        throw new ServiceNotFoundException($id);
     }
 
     public function has(string $id): bool
