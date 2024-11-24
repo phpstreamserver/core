@@ -35,7 +35,7 @@ final class SupervisorPlugin extends Plugin
     {
         $this->supervisor = new Supervisor($this->status, $this->stopTimeout, $this->restartDelay);
         $this->supervisorStatus = new SupervisorStatus();
-        $this->masterContainer->set(SupervisorStatus::class, $this->supervisorStatus);
+        $this->masterContainer->setService(SupervisorStatus::class, $this->supervisorStatus);
     }
 
     public function addWorker(Process $worker): void
@@ -48,11 +48,11 @@ final class SupervisorPlugin extends Plugin
     public function onStart(): void
     {
         /** @var Suspension $suspension */
-        $suspension = &$this->masterContainer->get('suspension');
+        $suspension = $this->masterContainer->getService('main_suspension');
         /** @var LoggerInterface $logger */
-        $logger = &$this->masterContainer->get('logger');
-        $this->handler = &$this->masterContainer->get('handler');
-        $this->bus = &$this->masterContainer->get('bus');
+        $logger = $this->masterContainer->getService(LoggerInterface::class);
+        $this->handler = $this->masterContainer->getService(MessageHandlerInterface::class);
+        $this->bus = $this->masterContainer->getService(MessageBusInterface::class);
 
         $this->supervisorStatus->subscribeToWorkerMessages($this->handler);
         $this->supervisor->start($suspension, $logger, $this->handler, $this->bus);
@@ -62,8 +62,8 @@ final class SupervisorPlugin extends Plugin
     {
         if (\interface_exists(RegistryInterface::class)) {
             try {
-                $registry = $this->masterContainer->get(RegistryInterface::class);
-                $this->masterContainer->set('supervisor_metrics_handler', new MetricsHandler($registry, $this->supervisorStatus, $this->handler));
+                $registry = $this->masterContainer->getService(RegistryInterface::class);
+                $this->masterContainer->setService(MetricsHandler::class, new MetricsHandler($registry, $this->supervisorStatus, $this->handler));
             } catch (NotFoundExceptionInterface) {}
         }
     }

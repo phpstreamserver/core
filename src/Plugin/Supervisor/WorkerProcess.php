@@ -5,32 +5,28 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\Supervisor;
 
 use Amp\DeferredFuture;
-use Amp\Future;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\ReloadStrategyStack;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessSpawnedEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\ReloadStrategyInterface;
 use PHPStreamServer\Core\Exception\UserChangeException;
-use PHPStreamServer\Core\Internal\Container;
 use PHPStreamServer\Core\Internal\ErrorHandler;
 use PHPStreamServer\Core\MessageBus\Message\CompositeMessage;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
-use PHPStreamServer\Core\MessageBus\MessageInterface;
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\Worker\ContainerInterface;
 use PHPStreamServer\Core\Worker\LoggerInterface;
 use PHPStreamServer\Core\Worker\ProcessUserChange;
 use PHPStreamServer\Core\Worker\Status;
-use Psr\Container\ContainerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\CallbackType;
 use Revolt\EventLoop\DriverFactory;
 use function PHPStreamServer\Core\getCurrentGroup;
 use function PHPStreamServer\Core\getCurrentUser;
 
-class WorkerProcess implements Process, MessageBusInterface, ContainerInterface
+class WorkerProcess implements Process
 {
     final public const HEARTBEAT_PERIOD = 2;
     final public const RELOAD_EXIT_CODE = 100;
@@ -42,9 +38,9 @@ class WorkerProcess implements Process, MessageBusInterface, ContainerInterface
     private int $exitCode = 0;
     public readonly int $id;
     public readonly int $pid;
-    protected readonly Container $container;
+    public readonly ContainerInterface $container;
     public readonly LoggerInterface $logger;
-    private readonly SocketFileMessageBus $messageBus;
+    public readonly MessageBusInterface $bus;
     private DeferredFuture|null $startingFuture;
     private readonly ReloadStrategyStack $reloadStrategyStack;
     protected readonly \Closure $reloadStrategyTrigger;
@@ -73,7 +69,7 @@ class WorkerProcess implements Process, MessageBusInterface, ContainerInterface
     /**
      * @internal
      */
-    final public function run(Container $workerContainer): int
+    final public function run(ContainerInterface $workerContainer): int
     {
         // some command line SAPIs (e.g. phpdbg) don't have that function
         if (\function_exists('cli_set_process_title')) {
@@ -85,8 +81,8 @@ class WorkerProcess implements Process, MessageBusInterface, ContainerInterface
         $this->status = Status::STARTING;
         $this->pid = \posix_getpid();
         $this->container = $workerContainer;
-        $this->logger = $workerContainer->get('logger')->withChannel('worker');
-        $this->messageBus = $workerContainer->get('bus');
+        $this->logger = $workerContainer->getService(LoggerInterface::class);
+        $this->bus = $workerContainer->getService(MessageBusInterface::class);
 
         ErrorHandler::register($this->logger);
         EventLoop::setErrorHandler(function (\Throwable $exception) {
@@ -125,11 +121,11 @@ class WorkerProcess implements Process, MessageBusInterface, ContainerInterface
         $this->startingFuture = new DeferredFuture();
 
         EventLoop::repeat(self::HEARTBEAT_PERIOD, function () use ($heartbeatEvent) {
-            $this->messageBus->dispatch($heartbeatEvent());
+            $this->bus->dispatch($heartbeatEvent());
         });
 
         EventLoop::queue(function () use ($heartbeatEvent): void {
-            $this->messageBus->dispatch(new CompositeMessage([
+            $this->bus->dispatch(new CompositeMessage([
                 new ProcessSpawnedEvent(
                     workerId: $this->id,
                     pid: $this->pid,
@@ -172,27 +168,6 @@ class WorkerProcess implements Process, MessageBusInterface, ContainerInterface
     final public function getGroup(): string
     {
         return $this->group ?? getCurrentGroup();
-    }
-
-    /**
-     * @template T
-     * @param MessageInterface<T> $message
-     * @return Future<T>
-     */
-    public function dispatch(MessageInterface $message): Future
-    {
-        return $this->messageBus->dispatch($message);
-    }
-
-
-    final public function get(string $id): mixed
-    {
-        return $this->container->get($id);
-    }
-
-    final public function has(string $id): bool
-    {
-        return $this->container->has($id);
     }
 
     public function stop(int $code = 0): void

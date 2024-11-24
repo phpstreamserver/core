@@ -27,14 +27,12 @@ final class SystemPlugin extends Plugin
     public function onStart(): void
     {
         $serverStatus = new ServerStatus();
-        $this->masterContainer->set(ServerStatus::class, $serverStatus);
+        $this->masterContainer->setService(ServerStatus::class, $serverStatus);
 
         $connectionsStatus = new ConnectionsStatus();
-        $this->masterContainer->set(ConnectionsStatus::class, $connectionsStatus);
+        $this->masterContainer->setService(ConnectionsStatus::class, $connectionsStatus);
 
-        /** @var MessageHandlerInterface $handler */
-        $handler = &$this->masterContainer->get('handler');
-
+        $handler = $this->masterContainer->getService(MessageHandlerInterface::class);
         $connectionsStatus->subscribeToWorkerMessages($handler);
     }
 

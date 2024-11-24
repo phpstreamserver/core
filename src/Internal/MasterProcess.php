@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal;
 
+use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageHandler;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
@@ -22,6 +23,7 @@ use PHPStreamServer\Core\Worker\ContainerInterface;
 use PHPStreamServer\Core\Worker\LoggerInterface;
 use PHPStreamServer\Core\Worker\Status;
 use Psr\Container\ContainerInterface as PsrContainerInterface;
+use Psr\Log\LoggerInterface as PsrLoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Driver\StreamSelectDriver;
 use Revolt\EventLoop\Suspension;
@@ -32,7 +34,7 @@ use function PHPStreamServer\Core\isRunning;
 /**
  * @internal
  */
-final class MasterProcess implements PsrContainerInterface
+final class MasterProcess
 {
     private const GC_PERIOD = 300;
 
@@ -81,16 +83,19 @@ final class MasterProcess implements PsrContainerInterface
         EventLoop::setDriver(new StreamSelectDriver());
         $this->suspension = EventLoop::getDriver()->getSuspension();
 
-        $this->masterContainer->set('suspension', $this->suspension);
-        $this->masterContainer->register('handler', fn() => new SocketFileMessageHandler($this->socketFile));
-        $this->masterContainer->alias('bus', 'handler');
-        $this->masterContainer->register('logger', $defaultLogger = static fn() => new ConsoleLogger());
-        $this->masterContainer->set('pid_file', $this->pidFile);
-        $this->masterContainer->set('socket_file', $this->socketFile);
-        $this->workerContainer->register('bus', fn() => new SocketFileMessageBus($this->socketFile));
-        $this->workerContainer->register('logger', $defaultLogger);
-        $this->workerContainer->set('pid_file', $this->pidFile);
-        $this->workerContainer->set('socket_file', $this->socketFile);
+        $this->masterContainer->setService('main_suspension', $this->suspension);
+        $this->masterContainer->registerService(MessageHandlerInterface::class, fn() => new SocketFileMessageHandler($this->socketFile));
+        $this->masterContainer->setAlias(MessageBusInterface::class, MessageHandlerInterface::class);
+        $this->masterContainer->registerService(LoggerInterface::class, $defaultLogger = static fn() => new ConsoleLogger());
+        $this->masterContainer->setParameter('pid_file', $this->pidFile);
+        $this->masterContainer->setParameter('socket_file', $this->socketFile);
+        $this->workerContainer->registerService(MessageBusInterface::class, fn() => new SocketFileMessageBus($this->socketFile));
+        $this->workerContainer->registerService(LoggerInterface::class, static fn() => $defaultLogger()->withChannel('worker'));
+        $this->workerContainer->setAlias(PsrLoggerInterface::class, LoggerInterface::class);
+        $this->workerContainer->setParameter('pid_file', $this->pidFile);
+        $this->workerContainer->setParameter('socket_file', $this->socketFile);
+        $this->workerContainer->setService(ContainerInterface::class, $this->workerContainer);
+        $this->workerContainer->setAlias(PsrContainerInterface::class, ContainerInterface::class);
 
         $this->addPlugin(...$plugins);
         $this->addWorker(...$workers);
@@ -175,8 +180,8 @@ final class MasterProcess implements PsrContainerInterface
         $this->status = Status::STARTING;
         $this->saveMasterPid();
 
-        $this->logger = $this->masterContainer->get('logger');
-        $this->messageHandler = $this->masterContainer->get('handler');
+        $this->logger = $this->masterContainer->getService(LoggerInterface::class);
+        $this->messageHandler = $this->masterContainer->getService(MessageHandlerInterface::class);
 
         ErrorHandler::register($this->logger);
         EventLoop::setErrorHandler(ErrorHandler::handleException(...));
@@ -203,15 +208,15 @@ final class MasterProcess implements PsrContainerInterface
         }
 
         $this->messageHandler->subscribe(ContainerGetCommand::class, function (ContainerGetCommand $message) {
-            return $this->masterContainer->get($message->id);
+            return $this->masterContainer->getService($message->id);
         });
 
         $this->messageHandler->subscribe(ContainerHasCommand::class, function (ContainerHasCommand $message) {
-            return $this->masterContainer->has($message->id);
+            return false; // TODO: replace by cache
         });
 
         $this->messageHandler->subscribe(ContainerSetCommand::class, function (ContainerSetCommand $message) {
-            $this->masterContainer->set($message->id, $message->value);
+            $this->masterContainer->setService($message->id, $message->value);
         });
 
         $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $message) {
@@ -341,15 +346,5 @@ final class MasterProcess implements PsrContainerInterface
 
         \gc_collect_cycles();
         \gc_mem_caches();
-    }
-
-    public function get(string $id): mixed
-    {
-        return $this->masterContainer->get($id);
-    }
-
-    public function has(string $id): bool
-    {
-        return $this->masterContainer->has($id);
     }
 }

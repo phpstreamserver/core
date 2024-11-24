@@ -22,7 +22,7 @@ class ExternalProcess extends WorkerProcess
 
     private function onStart(): void
     {
-        $this->dispatch(new ProcessDetachedEvent($this->pid))->await();
+        $this->bus->dispatch(new ProcessDetachedEvent($this->pid))->await();
 
         if ($this->command === '') {
             $this->logger->critical('External process call error: command can not be empty', ['comand' => $this->command]);

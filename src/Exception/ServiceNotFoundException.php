@@ -10,6 +10,6 @@ final class ServiceNotFoundException extends \InvalidArgumentException implement
 {
     public function __construct(string $id)
     {
-        parent::__construct(\sprintf('"%s" is not registered in container', $id));
+        parent::__construct(\sprintf('You have requested a non-existent service "%s"', $id));
     }
 }

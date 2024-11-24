@@ -52,7 +52,7 @@ final class StartCommand extends Command
 
         unset($args);
 
-        $supervisorStatus = $masterProcess->get(SupervisorStatus::class);
+        $supervisorStatus = \Closure::bind(fn () => $this->masterContainer->getService(SupervisorStatus::class), $masterProcess, $masterProcess)();
         \assert($supervisorStatus instanceof SupervisorStatus);
 
         $eventLoop = getDriverName();
