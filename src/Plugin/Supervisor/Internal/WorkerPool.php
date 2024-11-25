@@ -22,7 +22,7 @@ final class WorkerPool
     private array $workerPool = [];
 
     /**
-     * @var ProcessStatus
+     * @var array<int, array<int, ProcessStatus>>
      */
     private array $processStatusMap = [];
 
@@ -92,7 +92,6 @@ final class WorkerPool
 
     /**
      * @return \Iterator<WorkerProcess>
-     * @psalm-return iterable<WorkerProcess>
      */
     public function getRegisteredWorkers(): \Iterator
     {

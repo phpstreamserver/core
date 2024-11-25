@@ -34,6 +34,7 @@ final class Colorizer
 
     /**
      * @param resource $stream
+     * @psalm-suppress RiskyTruthyFalsyComparison
      */
     public static function hasColorSupport($stream): bool
     {

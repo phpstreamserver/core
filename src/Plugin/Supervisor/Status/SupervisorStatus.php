@@ -14,7 +14,6 @@ use PHPStreamServer\Core\Plugin\Supervisor\WorkerProcess;
 use Revolt\EventLoop;
 
 use function Amp\weakClosure;
-use function PHPStreamServer\Core\getCurrentUser;
 use function PHPStreamServer\Core\getMemoryUsageByPid;
 
 final class SupervisorStatus
@@ -46,7 +45,7 @@ final class SupervisorStatus
         }));
 
         $handler->subscribe(ProcessHeartbeatEvent::class, weakClosure(function (ProcessHeartbeatEvent $message): void {
-            if (!isset($this->processes[$message->pid]) || $this->processes[$message->pid]?->detached === true) {
+            if (!isset($this->processes[$message->pid]) || $this->processes[$message->pid]->detached === true) {
                 return;
             }
 
@@ -55,7 +54,7 @@ final class SupervisorStatus
         }));
 
         $handler->subscribe(ProcessBlockedEvent::class, weakClosure(function (ProcessBlockedEvent $message): void {
-            if (!isset($this->processes[$message->pid]) || $this->processes[$message->pid]?->detached === true) {
+            if (!isset($this->processes[$message->pid]) || $this->processes[$message->pid]->detached === true) {
                 return;
             }
 
@@ -74,7 +73,7 @@ final class SupervisorStatus
             $this->processes[$message->pid]->detached = true;
             $this->processes[$message->pid]->blocked = false;
 
-            $checkMemoryUsageClosure = function (string $id) use ($message) {
+            $checkMemoryUsageClosure = function (string $id) use ($message): void {
                 isset($this->processes[$message->pid])
                     ? $this->processes[$message->pid]->memory = getMemoryUsageByPid($message->pid)
                     : EventLoop::cancel($id);
@@ -88,7 +87,7 @@ final class SupervisorStatus
     public function addWorker(WorkerProcess $worker): void
     {
         $this->workers[$worker->id] = new WorkerInfo(
-            user: $worker->getUser() ?? getCurrentUser(),
+            user: $worker->getUser(),
             name: $worker->name,
             count: $worker->count,
         );

@@ -9,7 +9,6 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy;
  */
 final class ExceptionReloadStrategy implements ReloadStrategyInterface
 {
-    /** @var array<class-string<\Throwable>> */
     private array $allowedExceptions = [
         'Amp\Http\Server\HttpErrorException',
     ];
@@ -19,7 +18,7 @@ final class ExceptionReloadStrategy implements ReloadStrategyInterface
      */
     public function __construct(array $allowedExceptions = [])
     {
-        \array_push($this->allowedExceptions, ...$allowedExceptions);
+        $this->allowedExceptions = [...$this->allowedExceptions, ...$allowedExceptions];
     }
 
     public function shouldReload(mixed $eventObject = null): bool

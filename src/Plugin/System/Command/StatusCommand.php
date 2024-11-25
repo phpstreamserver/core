@@ -42,10 +42,16 @@ final class StatusCommand extends Command
             \assert($serverStatus instanceof ServerStatus);
             $supervosorStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
             \assert($supervosorStatus instanceof SupervisorStatus);
+
             $startedAt = $serverStatus->startedAt;
             $workersCount = $supervosorStatus->getWorkersCount();
             $processesCount = $supervosorStatus->getProcessesCount();
             $totalMemory = $supervosorStatus->getTotalMemory();
+        } else {
+            $startedAt = new \DateTimeImmutable();
+            $workersCount = 0;
+            $processesCount = 0;
+            $totalMemory = 0;
         }
 
         echo ($isRunning ? '<color;fg=green>●</> ' : '● ') . Server::TITLE . "\n";

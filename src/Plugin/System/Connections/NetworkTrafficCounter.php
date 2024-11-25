@@ -20,6 +20,9 @@ final class NetworkTrafficCounter
 {
     private const MAX_FLUSH_TIME = 0.5;
 
+    /**
+     * @var list<MessageInterface>
+     */
     private array $queue = [];
     private string $callbackId = '';
 

@@ -80,6 +80,11 @@ final class ContextNormalizer
         );
     }
 
+    /**
+     * @param class-string $class
+     * @return class-string
+     * @psalm-suppress LessSpecificReturnStatement, MoreSpecificReturnType, RiskyTruthyFalsyComparison
+     */
     private function parseAnonymousClass(string $class): string
     {
         return \str_contains($class, "@anonymous\0")

@@ -47,9 +47,10 @@ class WorkerProcess implements Process
     protected readonly \Closure $reloadStrategyTrigger;
 
     /**
-     * @param null|\Closure(self):void $onStart
-     * @param null|\Closure(self):void $onStop
-     * @param null|\Closure(self):void $onReload
+     * @template T of self
+     * @param null|\Closure(T):void $onStart
+     * @param null|\Closure(T):void $onStop
+     * @param null|\Closure(T):void $onReload
      * @param array<ReloadStrategyInterface> $reloadStrategies
      */
     public function __construct(
@@ -138,13 +139,15 @@ class WorkerProcess implements Process
                 $heartbeatEvent(),
             ]))->await();
 
-            if ($this->onStart !== null) {
-                EventLoop::queue(function () {
+            EventLoop::queue(function () {
+                if ($this->onStart !== null) {
+                    /** @psalm-suppress InvalidArgument */
                     ($this->onStart)($this);
-                });
-            }
+                }
+            });
+
             $this->status = Status::RUNNING;
-            $this->startingFuture->complete();
+            $this->startingFuture?->complete();
             $this->startingFuture = null;
         });
 
@@ -183,6 +186,7 @@ class WorkerProcess implements Process
         EventLoop::defer(function (): void {
             $this->startingFuture?->getFuture()->await();
             if ($this->onStop !== null) {
+                /** @psalm-suppress InvalidArgument */
                 ($this->onStop)($this);
             }
             $this->gracefulStop();
@@ -205,6 +209,7 @@ class WorkerProcess implements Process
         EventLoop::defer(function (): void {
             $this->startingFuture?->getFuture()->await();
             if ($this->onReload !== null) {
+                /** @psalm-suppress InvalidArgument */
                 ($this->onReload)($this);
             }
             $this->gracefulStop();

@@ -43,6 +43,7 @@ final class ConsoleLogger implements LoggerInterface
     public function __construct()
     {
         $this->contextNormalizer = new ContextNormalizer();
+        /** @psalm-suppress PossiblyInvalidArgument */
         $this->colorSupport = Colorizer::hasColorSupport(getStderr()->getResource());
     }
 

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core;
 
-use PHPStreamServer\Core\Internal\Container;
 use PHPStreamServer\Core\Plugin\Plugin;
+use PHPStreamServer\Core\Worker\ContainerInterface;
 
 interface Process
 {
-    public function run(Container $workerContainer): int;
+    public function run(ContainerInterface $workerContainer): int;
 
     /**
      * @return list<class-string<Plugin>>

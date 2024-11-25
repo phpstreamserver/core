@@ -53,7 +53,12 @@ final class StartCommand extends Command
 
         unset($args);
 
-        $supervisorStatus = \Closure::bind(fn() => $this->masterContainer->getService(SupervisorStatus::class), $masterProcess, $masterProcess)();
+        /** @psalm-suppress UndefinedThisPropertyFetch, PossiblyNullFunctionCall */
+        $supervisorStatus = \Closure::bind(
+            fn(): SupervisorStatus => $this->masterContainer->getService(SupervisorStatus::class),
+            $masterProcess,
+            $masterProcess,
+        )();
         \assert($supervisorStatus instanceof SupervisorStatus);
 
         $eventLoop = getDriverName();

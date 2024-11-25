@@ -13,6 +13,7 @@ function getStartFile(): string
 {
     static $file;
     if (!isset($file)) {
+        /** @var array<array{file: string}> $backtrace */
         $backtrace = \debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
         $file = \end($backtrace)['file'];
     }
@@ -83,6 +84,7 @@ function getDefaultSocketFile(): string
 
 function getAbsoluteBinaryPath(string $binary): string
 {
+    /** @psalm-suppress ForbiddenCode */
     if (!\str_starts_with($binary, '/') && \is_string($absoluteBinaryPath = \shell_exec("command -v $binary"))) {
         $binary = \trim($absoluteBinaryPath);
     }
@@ -96,8 +98,9 @@ function getMemoryUsageByPid(int $pid): int
         $pagesize = \posix_sysconf(POSIX_SC_PAGESIZE);
         $statm = \trim(\file_get_contents("/proc/$pid/statm"));
         $statm = \explode(' ', $statm);
-        $vmrss = ($statm[1] ?? 0) * $pagesize;
+        $vmrss = (int) ($statm[1] ?? 0) * $pagesize;
     } else {
+        /** @psalm-suppress ForbiddenCode */
         $out = \shell_exec("ps -o rss= -p $pid 2>/dev/null");
         $vmrss = ((int) \trim((string) $out)) * 1024;
     }

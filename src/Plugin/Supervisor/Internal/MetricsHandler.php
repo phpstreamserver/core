@@ -61,7 +61,7 @@ final readonly class MetricsHandler
         );
 
         $handler->subscribe(ProcessExitEvent::class, weakClosure(function (ProcessExitEvent $message): void {
-            $this->memoryBytes->remove(['pid' => $message->pid]);
+            $this->memoryBytes->remove(['pid' => (string) $message->pid]);
             if ($message->exitCode === WorkerProcess::RELOAD_EXIT_CODE) {
                 $this->reloadsTotal->inc();
             } elseif ($message->exitCode > 0) {
@@ -80,7 +80,7 @@ final readonly class MetricsHandler
         $this->processesTotal->set($this->supervisorStatus->getProcessesCount());
 
         foreach ($this->supervisorStatus->getProcesses() as $process) {
-            $this->memoryBytes->set($process->memory, ['pid' => $process->pid]);
+            $this->memoryBytes->set($process->memory, ['pid' => (string) $process->pid]);
         }
     }
 }

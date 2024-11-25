@@ -48,7 +48,8 @@ final class Options
         $fullName = $definition?->name;
         $shortName = $definition?->shortName;
 
-        return \array_key_exists($fullName, $this->parsedOptions) || ($shortName !== null && \array_key_exists($shortName, $this->parsedOptions));
+        return ($fullName !== null && \array_key_exists($fullName, $this->parsedOptions))
+            || ($shortName !== null && \array_key_exists($shortName, $this->parsedOptions));
     }
 
     public function getOption(string $name): string|true|null

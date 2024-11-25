@@ -27,6 +27,7 @@ final class SocketFileMessageBus implements MessageBusInterface
      * @template T
      * @param MessageInterface<T> $message
      * @return Future<T>
+     * @psalm-suppress PossiblyUndefinedVariable
      */
     public function dispatch(MessageInterface $message): Future
     {
@@ -46,6 +47,8 @@ final class SocketFileMessageBus implements MessageBusInterface
             $socket->write(\pack('Va*', \strlen($serializedWriteData), $serializedWriteData));
 
             $data = $socket->read(limit: SocketFileMessageHandler::CHUNK_SIZE);
+            \assert(\is_string($data));
+
             ['size' => $size, 'data' => $data] = \unpack('Vsize/a*data', $data);
 
             while (\strlen($data) < $size) {

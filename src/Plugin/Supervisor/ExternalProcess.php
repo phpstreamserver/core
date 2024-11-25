@@ -73,8 +73,9 @@ class ExternalProcess extends WorkerProcess
     {
         $envVars = [...\getenv(), ...$_ENV];
 
-        \set_error_handler(function (int $code): void {
+        \set_error_handler(function (int $code): true {
             $this->logger->critical('External process call error: ' . \posix_strerror($code), ['comand' => $this->command]);
+            return true;
         });
 
         \pcntl_exec($path, $args, $envVars);

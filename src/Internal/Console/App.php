@@ -100,6 +100,7 @@ final class App
                 }
 
                 try {
+                    /** @psalm-suppress UndefinedInterfaceMethod */
                     return $command->execute($args->getIterator()->current());
                 } catch (ServerIsNotRunning) {
                     echo \sprintf("<color;bg=red>%s is not running</>\n", Server::NAME);
