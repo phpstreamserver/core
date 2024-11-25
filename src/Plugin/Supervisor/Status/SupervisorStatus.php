@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor\Status;
 
+use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessBlockedEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessDetachedEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessExitEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessSpawnedEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\WorkerProcess;
-use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use Revolt\EventLoop;
+
 use function Amp\weakClosure;
 use function PHPStreamServer\Core\getCurrentUser;
 use function PHPStreamServer\Core\getMemoryUsageByPid;

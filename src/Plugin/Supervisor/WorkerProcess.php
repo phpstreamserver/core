@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\Supervisor;
 
 use Amp\DeferredFuture;
-use PHPStreamServer\Core\Plugin\Supervisor\Internal\ReloadStrategyStack;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessHeartbeatEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessSpawnedEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\ReloadStrategyInterface;
 use PHPStreamServer\Core\Exception\UserChangeException;
 use PHPStreamServer\Core\Internal\ErrorHandler;
 use PHPStreamServer\Core\MessageBus\Message\CompositeMessage;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
+use PHPStreamServer\Core\Plugin\Supervisor\Internal\ReloadStrategyStack;
+use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessHeartbeatEvent;
+use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessSpawnedEvent;
+use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\ReloadStrategyInterface;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Worker\ContainerInterface;
@@ -23,16 +23,17 @@ use PHPStreamServer\Core\Worker\Status;
 use Revolt\EventLoop;
 use Revolt\EventLoop\CallbackType;
 use Revolt\EventLoop\DriverFactory;
+
 use function PHPStreamServer\Core\getCurrentGroup;
 use function PHPStreamServer\Core\getCurrentUser;
 
 class WorkerProcess implements Process
 {
+    use ProcessUserChange;
+
     final public const HEARTBEAT_PERIOD = 2;
     final public const RELOAD_EXIT_CODE = 100;
     private const GC_PERIOD = 180;
-
-    use ProcessUserChange;
 
     private Status $status = Status::SHUTDOWN;
     private int $exitCode = 0;
@@ -155,7 +156,7 @@ class WorkerProcess implements Process
     /**
      * @return list<class-string<Plugin>>
      */
-    static public function handleBy(): array
+    public static function handleBy(): array
     {
         return [SupervisorPlugin::class];
     }
@@ -214,10 +215,10 @@ class WorkerProcess implements Process
     {
         foreach (EventLoop::getIdentifiers() as $identifier) {
             $type = EventLoop::getType($identifier);
-            if (\in_array($type, [CallbackType::Repeat, CallbackType::Signal])) {
+            if (\in_array($type, [CallbackType::Repeat, CallbackType::Signal], true)) {
                 EventLoop::disable($identifier);
             }
-            if (\in_array($type, [CallbackType::Readable, CallbackType::Writable])) {
+            if (\in_array($type, [CallbackType::Readable, CallbackType::Writable], true)) {
                 EventLoop::unreference($identifier);
             }
         }

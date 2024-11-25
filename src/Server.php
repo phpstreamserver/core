@@ -30,8 +30,8 @@ final class Server
         int $stopTimeout = 10,
         float $restartDelay = 0.25,
     ) {
-        $this->pidFile ??= getDefaultPidFile();
-        $this->socketFile ??= getDefaultSocketFile();
+        $this->pidFile ??= namespace\getDefaultPidFile();
+        $this->socketFile ??= namespace\getDefaultSocketFile();
         $this->addPlugin(new SystemPlugin());
         $this->addPlugin(new SupervisorPlugin($stopTimeout, $restartDelay));
     }
@@ -52,7 +52,7 @@ final class Server
 
     public function run(): int
     {
-        $app = new App(...\array_merge(...\array_map(static fn (Plugin $p) => $p->registerCommands(), $this->plugins)));
+        $app = new App(...\array_merge(...\array_map(static fn(Plugin $p) => $p->registerCommands(), $this->plugins)));
         $map = new \WeakMap();
         $map[EventLoop::getDriver()] = \get_object_vars($this);
         unset($this->workers, $this->plugins);

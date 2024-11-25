@@ -6,6 +6,7 @@ namespace PHPStreamServer\Core\Console;
 
 use PHPStreamServer\Core\Internal\Console\ServerIsNotRunning;
 use PHPStreamServer\Core\Internal\Console\ServerIsRunning;
+
 use function PHPStreamServer\Core\isRunning;
 
 abstract class Command

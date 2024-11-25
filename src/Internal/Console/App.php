@@ -9,6 +9,7 @@ use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Options;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Server;
+
 use function PHPStreamServer\Core\getStartFile;
 
 /**
@@ -23,7 +24,6 @@ final class App
 
     private string|null $command = null;
     private array $parsedOptions = [];
-
     private Options $options;
 
     public function __construct(Command ...$commands)
@@ -34,7 +34,7 @@ final class App
                 new OptionDefinition('help', 'h', 'Show help'),
                 new OptionDefinition('quiet', 'q', 'Do not output any message'),
                 new OptionDefinition('no-color', null, 'Disable color output'),
-            ]
+            ],
         );
 
         foreach ($commands as $command) {

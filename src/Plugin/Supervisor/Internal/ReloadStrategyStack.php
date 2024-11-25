@@ -34,7 +34,7 @@ final class ReloadStrategyStack
         foreach ($reloadStrategies as $reloadStrategy) {
             if ($reloadStrategy instanceof TimerReloadStrategyInterface) {
                 EventLoop::repeat($reloadStrategy->getInterval(), function () use ($reloadStrategy): void {
-                    if($reloadStrategy->shouldReload()) {
+                    if ($reloadStrategy->shouldReload()) {
                         $this->reload();
                     }
                 });

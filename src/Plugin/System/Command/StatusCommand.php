@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System\Command;
 
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
+use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\GetSupervisorStatusCommand;
+use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Plugin\System\Message\GetServerStatusCommand;
 use PHPStreamServer\Core\Plugin\System\Status\ServerStatus;
 use PHPStreamServer\Core\Server;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
+
 use function PHPStreamServer\Core\getDriverName;
 use function PHPStreamServer\Core\getStartFile;
 use function PHPStreamServer\Core\humanFileSize;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
-use PHPStreamServer\Core\Plugin\Supervisor\WorkerProcess;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
+use PHPStreamServer\Core\Plugin\Supervisor\WorkerProcess;
 use Revolt\EventLoop;
 
 /**

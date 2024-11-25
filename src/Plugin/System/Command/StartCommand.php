@@ -8,10 +8,11 @@ use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Internal\MasterProcess;
 use PHPStreamServer\Core\Plugin\Plugin;
-use PHPStreamServer\Core\Process;
-use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\WorkerInfo;
+use PHPStreamServer\Core\Process;
+use PHPStreamServer\Core\Server;
+
 use function PHPStreamServer\Core\getDriverName;
 
 /**
@@ -52,7 +53,7 @@ final class StartCommand extends Command
 
         unset($args);
 
-        $supervisorStatus = \Closure::bind(fn () => $this->masterContainer->getService(SupervisorStatus::class), $masterProcess, $masterProcess)();
+        $supervisorStatus = \Closure::bind(fn() => $this->masterContainer->getService(SupervisorStatus::class), $masterProcess, $masterProcess)();
         \assert($supervisorStatus instanceof SupervisorStatus);
 
         $eventLoop = getDriverName();

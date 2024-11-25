@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\System\Connections;
 
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
+use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessDetachedEvent;
+use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessSpawnedEvent;
 use PHPStreamServer\Core\Plugin\System\Message\ConnectionClosedEvent;
 use PHPStreamServer\Core\Plugin\System\Message\ConnectionCreatedEvent;
 use PHPStreamServer\Core\Plugin\System\Message\RequestCounterIncreaseEvent;
 use PHPStreamServer\Core\Plugin\System\Message\RxCounterIncreaseEvent;
 use PHPStreamServer\Core\Plugin\System\Message\TxCounterIncreaseEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessDetachedEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessSpawnedEvent;
+
 use function Amp\weakClosure;
 
 final class ConnectionsStatus
@@ -78,6 +79,6 @@ final class ConnectionsStatus
      */
     public function getActiveConnections(): array
     {
-        return \array_merge(...\array_map(static fn (ProcessConnectionsInfo $p) => $p->connections, $this->processConnections));
+        return \array_merge(...\array_map(static fn(ProcessConnectionsInfo $p) => $p->connections, $this->processConnections));
     }
 }

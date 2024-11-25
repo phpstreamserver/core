@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal;
 
-use PHPStreamServer\Core\MessageBus\MessageBusInterface;
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
-use PHPStreamServer\Core\MessageBus\SocketFileMessageHandler;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\Console\StdoutHandler;
 use PHPStreamServer\Core\Internal\Logger\ConsoleLogger;
 use PHPStreamServer\Core\MessageBus\Message\ReloadServerCommand;
 use PHPStreamServer\Core\MessageBus\Message\StopServerCommand;
+use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
+use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
+use PHPStreamServer\Core\MessageBus\SocketFileMessageHandler;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
@@ -24,6 +24,7 @@ use Psr\Log\LoggerInterface as PsrLoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Driver\StreamSelectDriver;
 use Revolt\EventLoop\Suspension;
+
 use function Amp\Future\await;
 use function PHPStreamServer\Core\getStartFile;
 use function PHPStreamServer\Core\isRunning;
@@ -199,7 +200,7 @@ final class MasterProcess
         });
 
         foreach ($this->plugins as $plugin) {
-            EventLoop::defer(function () use ($plugin) {
+            EventLoop::defer(static function () use ($plugin) {
                 $plugin->onStart();
             });
         }
@@ -223,7 +224,7 @@ final class MasterProcess
         });
 
         foreach ($this->plugins as $plugin) {
-            EventLoop::defer(function () use ($plugin) {
+            EventLoop::defer(static function () use ($plugin) {
                 $plugin->afterStart();
             });
         }
@@ -289,7 +290,7 @@ final class MasterProcess
 
         $this->status = Status::STOPPING;
         $this->logger->debug(Server::NAME . ' stopping ...');
-        await(\array_map(fn (Plugin $p) => $p->onStop(), $this->plugins));
+        await(\array_map(static fn(Plugin $p) => $p->onStop(), $this->plugins));
         $this->status = Status::SHUTDOWN;
         $this->logger->info(Server::NAME . ' stopped');
         $this->suspension->resume($code);
@@ -297,7 +298,7 @@ final class MasterProcess
 
     private function reload(): void
     {
-        if($this->status !== Status::RUNNING) {
+        if ($this->status !== Status::RUNNING) {
             return;
         }
 

@@ -96,7 +96,7 @@ final class NetworkTrafficCounter
         $this->queue[] = $message;
 
         if ($this->callbackId === '') {
-            $this->callbackId = EventLoop::delay(self::MAX_FLUSH_TIME, fn () => $this->flush());
+            $this->callbackId = EventLoop::delay(self::MAX_FLUSH_TIME, fn() => $this->flush());
         }
     }
 

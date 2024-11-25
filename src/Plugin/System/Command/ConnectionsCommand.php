@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System\Command;
 
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
+use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Plugin\System\Connections\Connection;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
 use PHPStreamServer\Core\Plugin\System\Message\GetConnectionsStatusCommand;
+
 use function PHPStreamServer\Core\humanFileSize;
 
 /**

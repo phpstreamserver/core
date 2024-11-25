@@ -6,12 +6,13 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\Command;
 
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
+use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\GetSupervisorStatusCommand;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\ProcessInfo;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
 use PHPStreamServer\Core\Plugin\System\Message\GetConnectionsStatusCommand;
+
 use function PHPStreamServer\Core\humanFileSize;
 
 /**
@@ -42,7 +43,7 @@ final class ProcessesCommand extends Command
 
         if ($processesStatus->getProcessesCount() > 0) {
             $processes = $processesStatus->getProcesses();
-            \usort($processes, static fn (ProcessInfo $a, ProcessInfo $b) => $a->workerId <=> $b->workerId);
+            \usort($processes, static fn(ProcessInfo $a, ProcessInfo $b) => $a->workerId <=> $b->workerId);
 
             echo (new Table(indent: 1))
                 ->setHeaderRow([
@@ -68,7 +69,7 @@ final class ProcessesCommand extends Command
                         $c->rx === 0 && $c->tx === 0
                             ? \sprintf('<color;fg=gray>(%s / %s)</>', humanFileSize($c->rx), humanFileSize($c->tx))
                             : \sprintf('(%s / %s)', humanFileSize($c->rx), humanFileSize($c->tx)),
-                        match(true) {
+                        match (true) {
                             $w->detached => '[<color;fg=cyan>DETACHED</>]',
                             $w->blocked => '[<color;fg=yellow>BLOCKED</>]',
                             default => '[<color;fg=green>OK</>]',

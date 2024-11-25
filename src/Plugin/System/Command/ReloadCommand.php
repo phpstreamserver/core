@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System\Command;
 
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\MessageBus\Message\ReloadServerCommand;
+use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Server;
 
 /**
@@ -26,7 +26,7 @@ final class ReloadCommand extends Command
         $this->assertServerIsRunning($args['pidFile']);
 
         $bus = new SocketFileMessageBus($args['socketFile']);
-        echo Server::NAME ." reloading ...\n";
+        echo Server::NAME . " reloading ...\n";
         $bus->dispatch(new ReloadServerCommand())->await();
 
         return 0;

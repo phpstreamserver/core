@@ -14,5 +14,5 @@ interface Process
     /**
      * @return list<class-string<Plugin>>
      */
-    static public function handleBy(): array;
+    public static function handleBy(): array;
 }

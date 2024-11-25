@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\Supervisor;
 
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessDetachedEvent;
+
 use function PHPStreamServer\Core\getAbsoluteBinaryPath;
 
 class ExternalProcess extends WorkerProcess
@@ -31,7 +32,7 @@ class ExternalProcess extends WorkerProcess
         }
 
         // Check if command contains logic operators such as && and ||
-        if(\preg_match('/(\'[^\']*\'|"[^"]*")(*SKIP)(*FAIL)|&&|\|\|/', $this->command) === 1) {
+        if (\preg_match('/(\'[^\']*\'|"[^"]*")(*SKIP)(*FAIL)|&&|\|\|/', $this->command) === 1) {
             $this->logger->critical(\sprintf(
                 'External process call error: logical operators not supported, use shell with -c option e.g. "/bin/sh -c "%s"',
                 $this->command,
@@ -54,7 +55,7 @@ class ExternalProcess extends WorkerProcess
     private function convertCommandToPcntl(string $command): array
     {
         \preg_match_all('/\'[^\']*\'|"[^"]*"|\S+/', $command, $matches);
-        $parts = \array_map(static fn (string $part): string => \trim($part, '"\''), $matches[0]);
+        $parts = \array_map(static fn(string $part): string => \trim($part, '"\''), $matches[0]);
         $binary = \array_shift($parts);
         $args = $parts;
 

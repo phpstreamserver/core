@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System\Command;
 
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\MessageBus\Message\StopServerCommand;
+use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Server;
 
 /**
@@ -26,9 +26,9 @@ final class StopCommand extends Command
         $this->assertServerIsRunning($args['pidFile']);
 
         $bus = new SocketFileMessageBus($args['socketFile']);
-        echo Server::NAME ." stopping ...\n";
+        echo Server::NAME . " stopping ...\n";
         $bus->dispatch(new StopServerCommand())->await();
-        echo Server::NAME ." stopped\n";
+        echo Server::NAME . " stopped\n";
 
         return 0;
     }

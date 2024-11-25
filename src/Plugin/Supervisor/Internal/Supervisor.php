@@ -6,19 +6,20 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Future;
+use PHPStreamServer\Core\Exception\PHPStreamServerException;
+use PHPStreamServer\Core\Internal\SIGCHLDHandler;
+use PHPStreamServer\Core\MessageBus\MessageBusInterface;
+use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessBlockedEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessDetachedEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessExitEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\WorkerProcess;
-use PHPStreamServer\Core\Exception\PHPStreamServerException;
-use PHPStreamServer\Core\Internal\SIGCHLDHandler;
-use PHPStreamServer\Core\MessageBus\MessageBusInterface;
-use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Worker\Status;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
+
 use function Amp\weakClosure;
 
 /**
@@ -136,14 +137,14 @@ final class Supervisor
         if ($this->status === Status::RUNNING) {
             if ($exitCode === 0) {
                 $this->logger->info(\sprintf('Worker %s[pid:%d] exit with code %s', $worker->name, $pid, $exitCode));
-            } elseif($exitCode === $worker::RELOAD_EXIT_CODE && $worker->reloadable) {
+            } elseif ($exitCode === $worker::RELOAD_EXIT_CODE && $worker->reloadable) {
                 $this->logger->info(\sprintf('Worker %s[pid:%d] reloaded', $worker->name, $pid));
             } else {
                 $this->logger->warning(\sprintf('Worker %s[pid:%d] exit with code %s', $worker->name, $pid, $exitCode));
             }
 
             // Restart worker
-            EventLoop::delay(\max($this->restartDelay, 0), function () use($worker): void {
+            EventLoop::delay(\max($this->restartDelay, 0), function () use ($worker): void {
                 $this->spawnWorker($worker);
             });
         } else {

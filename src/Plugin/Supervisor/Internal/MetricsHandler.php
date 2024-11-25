@@ -13,6 +13,7 @@ use PHPStreamServer\Plugin\Metrics\Counter;
 use PHPStreamServer\Plugin\Metrics\Gauge;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
 use Revolt\EventLoop;
+
 use function Amp\weakClosure;
 
 final readonly class MetricsHandler
@@ -63,7 +64,7 @@ final readonly class MetricsHandler
             $this->memoryBytes->remove(['pid' => $message->pid]);
             if ($message->exitCode === WorkerProcess::RELOAD_EXIT_CODE) {
                 $this->reloadsTotal->inc();
-            } else if ($message->exitCode > 0) {
+            } elseif ($message->exitCode > 0) {
                 $this->crashesTotal->inc();
             }
         }));

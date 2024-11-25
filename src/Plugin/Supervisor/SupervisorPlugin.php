@@ -16,8 +16,6 @@ use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Worker\LoggerInterface;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
-use PHPStreamServer\Plugin\Scheduler\Message\GetSchedulerStatusCommand;
-use PHPStreamServer\Plugin\Scheduler\Status\SchedulerStatus;
 use Psr\Container\NotFoundExceptionInterface;
 use Revolt\EventLoop\Suspension;
 
@@ -72,7 +70,8 @@ final class SupervisorPlugin extends Plugin
             try {
                 $registry = $this->masterContainer->getService(RegistryInterface::class);
                 $this->masterContainer->setService(MetricsHandler::class, new MetricsHandler($registry, $this->supervisorStatus, $this->handler));
-            } catch (NotFoundExceptionInterface) {}
+            } catch (NotFoundExceptionInterface) {
+            }
         }
     }
 
