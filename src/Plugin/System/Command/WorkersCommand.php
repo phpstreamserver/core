@@ -7,7 +7,7 @@ namespace PHPStreamServer\Core\Plugin\System\Command;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
-use PHPStreamServer\Core\MessageBus\Message\ContainerGetCommand;
+use PHPStreamServer\Core\Plugin\Supervisor\Message\GetSupervisorStatusCommand;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\WorkerInfo;
 
@@ -30,7 +30,7 @@ final class WorkersCommand extends Command
         echo "❯ Workers\n";
 
         $bus = new SocketFileMessageBus($args['socketFile']);
-        $supervisorStatus = $bus->dispatch(new ContainerGetCommand(SupervisorStatus::class))->await();
+        $supervisorStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
         \assert($supervisorStatus instanceof SupervisorStatus);
         $workers = $supervisorStatus->getWorkers();
 

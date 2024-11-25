@@ -11,10 +11,13 @@ use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Command\ProcessesCommand;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\MetricsHandler;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\Supervisor;
+use PHPStreamServer\Core\Plugin\Supervisor\Message\GetSupervisorStatusCommand;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Worker\LoggerInterface;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
+use PHPStreamServer\Plugin\Scheduler\Message\GetSchedulerStatusCommand;
+use PHPStreamServer\Plugin\Scheduler\Status\SchedulerStatus;
 use Psr\Container\NotFoundExceptionInterface;
 use Revolt\EventLoop\Suspension;
 
@@ -56,6 +59,11 @@ final class SupervisorPlugin extends Plugin
 
         $this->supervisorStatus->subscribeToWorkerMessages($this->handler);
         $this->supervisor->start($suspension, $logger, $this->handler, $this->bus);
+
+        $supervisorStatus = $this->supervisorStatus;
+        $this->handler->subscribe(GetSupervisorStatusCommand::class, static function () use ($supervisorStatus): SupervisorStatus {
+            return $supervisorStatus;
+        });
     }
 
     public function afterStart(): void

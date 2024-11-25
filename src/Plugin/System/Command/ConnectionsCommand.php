@@ -7,9 +7,9 @@ namespace PHPStreamServer\Core\Plugin\System\Command;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
-use PHPStreamServer\Core\MessageBus\Message\ContainerGetCommand;
 use PHPStreamServer\Core\Plugin\System\Connections\Connection;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
+use PHPStreamServer\Core\Plugin\System\Message\GetConnectionsStatusCommand;
 use function PHPStreamServer\Core\humanFileSize;
 
 /**
@@ -32,7 +32,7 @@ final class ConnectionsCommand extends Command
 
         $bus = new SocketFileMessageBus($args['socketFile']);
 
-        $connectionsStatus = $bus->dispatch(new ContainerGetCommand(ConnectionsStatus::class))->await();
+        $connectionsStatus = $bus->dispatch(new GetConnectionsStatusCommand())->await();
         \assert($connectionsStatus instanceof ConnectionsStatus);
 
         $connections = $connectionsStatus->getActiveConnections();

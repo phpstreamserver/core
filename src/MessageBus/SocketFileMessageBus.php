@@ -22,6 +22,11 @@ final class SocketFileMessageBus implements MessageBusInterface
         $this->connector = new StaticSocketConnector(new UnixAddress($socketFile), new DnsSocketConnector());
     }
 
+    /**
+     * @template T
+     * @param MessageInterface<T> $message
+     * @return Future<T>
+     */
     public function dispatch(MessageInterface $message): Future
     {
         $connector = &$this->connector;

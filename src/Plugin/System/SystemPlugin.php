@@ -13,6 +13,8 @@ use PHPStreamServer\Core\Plugin\System\Command\StatusCommand;
 use PHPStreamServer\Core\Plugin\System\Command\StopCommand;
 use PHPStreamServer\Core\Plugin\System\Command\WorkersCommand;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
+use PHPStreamServer\Core\Plugin\System\Message\GetConnectionsStatusCommand;
+use PHPStreamServer\Core\Plugin\System\Message\GetServerStatusCommand;
 use PHPStreamServer\Core\Plugin\System\Status\ServerStatus;
 
 /**
@@ -27,13 +29,21 @@ final class SystemPlugin extends Plugin
     public function onStart(): void
     {
         $serverStatus = new ServerStatus();
-        $this->masterContainer->setService(ServerStatus::class, $serverStatus);
-
         $connectionsStatus = new ConnectionsStatus();
+
+        $this->masterContainer->setService(ServerStatus::class, $serverStatus);
         $this->masterContainer->setService(ConnectionsStatus::class, $connectionsStatus);
 
         $handler = $this->masterContainer->getService(MessageHandlerInterface::class);
         $connectionsStatus->subscribeToWorkerMessages($handler);
+
+        $handler->subscribe(GetServerStatusCommand::class, static function () use ($serverStatus): ServerStatus {
+            return $serverStatus;
+        });
+
+        $handler->subscribe(GetConnectionsStatusCommand::class, static function () use ($connectionsStatus): ConnectionsStatus {
+            return $connectionsStatus;
+        });
     }
 
     public function registerCommands(): array

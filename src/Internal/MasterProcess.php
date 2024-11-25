@@ -10,9 +10,6 @@ use PHPStreamServer\Core\MessageBus\SocketFileMessageHandler;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\Console\StdoutHandler;
 use PHPStreamServer\Core\Internal\Logger\ConsoleLogger;
-use PHPStreamServer\Core\MessageBus\Message\ContainerGetCommand;
-use PHPStreamServer\Core\MessageBus\Message\ContainerHasCommand;
-use PHPStreamServer\Core\MessageBus\Message\ContainerSetCommand;
 use PHPStreamServer\Core\MessageBus\Message\ReloadServerCommand;
 use PHPStreamServer\Core\MessageBus\Message\StopServerCommand;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
@@ -206,18 +203,6 @@ final class MasterProcess
                 $plugin->onStart();
             });
         }
-
-        $this->messageHandler->subscribe(ContainerGetCommand::class, function (ContainerGetCommand $message) {
-            return $this->masterContainer->getService($message->id);
-        });
-
-        $this->messageHandler->subscribe(ContainerHasCommand::class, function (ContainerHasCommand $message) {
-            return false; // TODO: replace by cache
-        });
-
-        $this->messageHandler->subscribe(ContainerSetCommand::class, function (ContainerSetCommand $message) {
-            $this->masterContainer->setService($message->id, $message->value);
-        });
 
         $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $message) {
             $this->stop($message->code);

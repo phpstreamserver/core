@@ -7,7 +7,8 @@ namespace PHPStreamServer\Core\Plugin\System\Command;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
-use PHPStreamServer\Core\MessageBus\Message\ContainerGetCommand;
+use PHPStreamServer\Core\Plugin\Supervisor\Message\GetSupervisorStatusCommand;
+use PHPStreamServer\Core\Plugin\System\Message\GetServerStatusCommand;
 use PHPStreamServer\Core\Plugin\System\Status\ServerStatus;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
@@ -36,9 +37,9 @@ final class StatusCommand extends Command
 
         if ($isRunning) {
             $bus = new SocketFileMessageBus($args['socketFile']);
-            $serverStatus = $bus->dispatch(new ContainerGetCommand(ServerStatus::class))->await();
+            $serverStatus = $bus->dispatch(new GetServerStatusCommand())->await();
             \assert($serverStatus instanceof ServerStatus);
-            $supervosorStatus = $bus->dispatch(new ContainerGetCommand(SupervisorStatus::class))->await();
+            $supervosorStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
             \assert($supervosorStatus instanceof SupervisorStatus);
             $startedAt = $serverStatus->startedAt;
             $workersCount = $supervosorStatus->getWorkersCount();

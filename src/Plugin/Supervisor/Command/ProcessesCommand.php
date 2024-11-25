@@ -6,11 +6,12 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\Command;
 
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
+use PHPStreamServer\Core\Plugin\Supervisor\Message\GetSupervisorStatusCommand;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\ProcessInfo;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
-use PHPStreamServer\Core\MessageBus\Message\ContainerGetCommand;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
+use PHPStreamServer\Core\Plugin\System\Message\GetConnectionsStatusCommand;
 use function PHPStreamServer\Core\humanFileSize;
 
 /**
@@ -33,10 +34,10 @@ final class ProcessesCommand extends Command
 
         $bus = new SocketFileMessageBus($args['socketFile']);
 
-        $processesStatus = $bus->dispatch(new ContainerGetCommand(SupervisorStatus::class))->await();
+        $processesStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
         \assert($processesStatus instanceof SupervisorStatus);
 
-        $connectionsStatus = $bus->dispatch(new ContainerGetCommand(ConnectionsStatus::class))->await();
+        $connectionsStatus = $bus->dispatch(new GetConnectionsStatusCommand())->await();
         \assert($connectionsStatus instanceof ConnectionsStatus);
 
         if ($processesStatus->getProcessesCount() > 0) {
