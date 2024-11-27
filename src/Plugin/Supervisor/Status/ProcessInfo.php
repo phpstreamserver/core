@@ -15,6 +15,7 @@ final class ProcessInfo
         public int $memory = 0,
         public bool $detached = false,
         public bool $blocked = false,
+        public bool $reloadable = true,
     ) {
     }
 }

@@ -305,7 +305,9 @@ final class MasterProcess
         $this->logger->info(Server::NAME . ' reloading ...');
 
         foreach ($this->plugins as $plugin) {
-            $plugin->onReload();
+            EventLoop::queue(static function () use ($plugin) {
+                $plugin->onReload();
+            });
         }
     }
 

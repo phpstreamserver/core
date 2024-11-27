@@ -41,6 +41,7 @@ final class SupervisorStatus
                 user: $message->user,
                 name: $message->name,
                 startedAt: $message->startedAt,
+                reloadable: $message->reloadable,
             );
         }));
 
@@ -87,9 +88,11 @@ final class SupervisorStatus
     public function addWorker(WorkerProcess $worker): void
     {
         $this->workers[$worker->id] = new WorkerInfo(
+            id: $worker->id,
             user: $worker->getUser(),
             name: $worker->name,
             count: $worker->count,
+            reloadable: $worker->reloadable,
         );
     }
 
