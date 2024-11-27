@@ -21,7 +21,6 @@ use PHPStreamServer\Core\Worker\LoggerInterface;
 use PHPStreamServer\Core\Worker\ProcessUserChange;
 use PHPStreamServer\Core\Worker\Status;
 use Revolt\EventLoop;
-use Revolt\EventLoop\CallbackType;
 use Revolt\EventLoop\DriverFactory;
 
 use function PHPStreamServer\Core\getCurrentGroup;
@@ -189,7 +188,7 @@ class WorkerProcess implements Process
                 /** @psalm-suppress InvalidArgument */
                 ($this->onStop)($this);
             }
-            $this->gracefulStop();
+            EventLoop::getDriver()->stop();
         });
     }
 
@@ -212,21 +211,8 @@ class WorkerProcess implements Process
                 /** @psalm-suppress InvalidArgument */
                 ($this->onReload)($this);
             }
-            $this->gracefulStop();
+            EventLoop::getDriver()->stop();
         });
-    }
-
-    private function gracefulStop(): void
-    {
-        foreach (EventLoop::getIdentifiers() as $identifier) {
-            $type = EventLoop::getType($identifier);
-            if (\in_array($type, [CallbackType::Repeat, CallbackType::Signal], true)) {
-                EventLoop::disable($identifier);
-            }
-            if (\in_array($type, [CallbackType::Readable, CallbackType::Writable], true)) {
-                EventLoop::unreference($identifier);
-            }
-        }
     }
 
     public function addReloadStrategy(ReloadStrategyInterface ...$reloadStrategies): void
