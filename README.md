@@ -5,15 +5,14 @@
   </picture>
 </p>
 
-# PHPStreamServer - PHP Application Server
+## PHPStreamServer - PHP Application Server
 ![PHP >=8.2](https://img.shields.io/badge/PHP->=8.2-777bb3.svg)
 ![Version](https://img.shields.io/github/v/tag/phpstreamserver/phpstreamserver?label=Version&filter=v*.*.*&sort=semver&color=374151)
-![Tests Status](https://img.shields.io/github/actions/workflow/status/phpstreamserver/phpstreamserver/tests.yaml?label=Tests&branch=main)
 
-**PHPStreamServer** is a high performance, event-loop based application server and process supervisor for PHP written in PHP.  
+**PHPStreamServer** is a high performance, event-loop based application server and process supervisor for PHP written in PHP.
 As the core component of PHPStreamServer, this module is responsible for comprehensive worker management.
 
-## Features:
+### Features
 - Worker lifecycle management: Handles the creation, monitoring, and termination of worker processes.
 - Automatic restarts: Automatically restarts workers in case of an exception or upon reaching specified limits.
 - Time-to-live limits: Sets execution time limits for worker processes.
@@ -21,17 +20,16 @@ As the core component of PHPStreamServer, this module is responsible for compreh
 - Support for external programs: Use all of these to enable the supervision of external programs and processes.
 - Resource sharing across workers: Preload any resources in a master process, and it will be shared among all workers reducing memory usage.
 
-#### Requirements and limitations:  
+### Requirements and limitations
  - Unix based OS (no windows support);
  - php-posix and php-pcntl extensions;
 
-## Getting started
-### Install composer packages
+### Install
 ```bash
 $ composer require phpstreamserver/core
 ```
 
-### Configure server
+### Configure
 Here is an example of a simple supervisor server configuration.
 
 ```php
