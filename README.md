@@ -5,9 +5,10 @@
   </picture>
 </p>
 
-## PHPStreamServer - PHP Application Server
+## PHPStreamServer — PHP Application Server
 ![PHP >=8.2](https://img.shields.io/badge/PHP->=8.2-777bb3.svg)
 ![Version](https://img.shields.io/github/v/tag/phpstreamserver/phpstreamserver?label=Version&filter=v*.*.*&sort=semver&color=374151)
+![Downloads](https://img.shields.io/packagist/dt/phpstreamserver/core?label=Downloads&color=f28d1a)
 
 **PHPStreamServer** is a high performance, event-loop based application server and process supervisor for PHP written in PHP.
 As the core component of PHPStreamServer, this module is responsible for comprehensive worker management.
