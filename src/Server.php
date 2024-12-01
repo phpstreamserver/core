@@ -64,9 +64,9 @@ final class Server
     {
         static $version;
         try {
-            return $version ??= InstalledVersions::getVersion(self::PACKAGE) ?? '???';
+            return $version ??= InstalledVersions::getVersion(self::PACKAGE) ?? 'dev';
         } catch (\OutOfBoundsException) {
-            return $version ??= '???';
+            return $version ??= 'dev';
         }
     }
 
