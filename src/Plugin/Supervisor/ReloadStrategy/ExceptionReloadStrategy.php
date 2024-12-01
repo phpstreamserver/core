@@ -7,7 +7,7 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy;
 /**
  * Reload worker each time when exception occurs
  */
-final class ExceptionReloadStrategy implements ReloadStrategyInterface
+final class ExceptionReloadStrategy implements ReloadStrategy
 {
     private array $allowedExceptions = [
         'Amp\Http\Server\HttpErrorException',

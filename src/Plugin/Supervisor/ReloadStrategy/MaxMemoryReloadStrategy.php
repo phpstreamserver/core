@@ -7,7 +7,7 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy;
 /**
  * Reload worker if worker memory usage has increased $maxMemory value
  */
-final class MaxMemoryReloadStrategy implements TimerReloadStrategyInterface
+final class MaxMemoryReloadStrategy implements TimerReloadStrategy
 {
     private const TIMER_INTERVAL = 30;
 

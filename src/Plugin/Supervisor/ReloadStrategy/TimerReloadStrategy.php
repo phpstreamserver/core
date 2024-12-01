@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy;
 
-interface TimerReloadStrategyInterface extends ReloadStrategyInterface
+interface TimerReloadStrategy extends ReloadStrategy
 {
     /**
      * Strategy will be triggered repeatedly every N seconds.

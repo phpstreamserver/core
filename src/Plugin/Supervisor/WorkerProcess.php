@@ -13,7 +13,7 @@ use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\ReloadStrategyStack;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessSpawnedEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\ReloadStrategyInterface;
+use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\ReloadStrategy;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Worker\ContainerInterface;
@@ -50,7 +50,7 @@ class WorkerProcess implements Process
      * @param null|\Closure(T):void $onStart
      * @param null|\Closure(T):void $onStop
      * @param null|\Closure(T):void $onReload
-     * @param array<ReloadStrategyInterface> $reloadStrategies
+     * @param array<ReloadStrategy> $reloadStrategies
      */
     public function __construct(
         public string $name = 'none',
@@ -215,7 +215,7 @@ class WorkerProcess implements Process
         });
     }
 
-    public function addReloadStrategy(ReloadStrategyInterface ...$reloadStrategies): void
+    public function addReloadStrategy(ReloadStrategy ...$reloadStrategies): void
     {
         $this->reloadStrategyStack->addReloadStrategy(...$reloadStrategies);
     }

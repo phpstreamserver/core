@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
-use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\ReloadStrategyInterface;
-use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\TimerReloadStrategyInterface;
+use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\ReloadStrategy;
+use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\TimerReloadStrategy;
 use Revolt\EventLoop;
 
 /**
@@ -13,11 +13,11 @@ use Revolt\EventLoop;
  */
 final class ReloadStrategyStack
 {
-    /** @var list<ReloadStrategyInterface> */
+    /** @var list<ReloadStrategy> */
     private array $reloadStrategies = [];
 
     /**
-     * @param array<ReloadStrategyInterface> $reloadStrategies
+     * @param array<ReloadStrategy> $reloadStrategies
      */
     public function __construct(private readonly \Closure $reloadCallback, array $reloadStrategies = [])
     {
@@ -29,10 +29,10 @@ final class ReloadStrategyStack
         $this->emitEvent($event);
     }
 
-    public function addReloadStrategy(ReloadStrategyInterface ...$reloadStrategies): void
+    public function addReloadStrategy(ReloadStrategy ...$reloadStrategies): void
     {
         foreach ($reloadStrategies as $reloadStrategy) {
-            if ($reloadStrategy instanceof TimerReloadStrategyInterface) {
+            if ($reloadStrategy instanceof TimerReloadStrategy) {
                 EventLoop::repeat($reloadStrategy->getInterval(), function () use ($reloadStrategy): void {
                     if ($reloadStrategy->shouldReload()) {
                         $this->reload();

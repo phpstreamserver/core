@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy;
 
-interface ReloadStrategyInterface
+interface ReloadStrategy
 {
     /**
      * If the method returns true, the worker should be reloaded immediately.

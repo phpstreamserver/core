@@ -7,7 +7,7 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy;
 /**
  * Reload worker after $ttl working time
  */
-final class TTLReloadStrategy implements TimerReloadStrategyInterface
+final class TTLReloadStrategy implements TimerReloadStrategy
 {
     /**
      * @param int $ttl TTL in seconds
