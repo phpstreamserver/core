@@ -18,7 +18,6 @@ final class ErrorHandler
         \E_USER_DEPRECATED => ['User Deprecated', LogLevel::INFO],
         \E_NOTICE => ['Notice', LogLevel::WARNING],
         \E_USER_NOTICE => ['User Notice', LogLevel::WARNING],
-        \E_STRICT => ['Runtime Notice', LogLevel::WARNING],
         \E_WARNING => ['Warning', LogLevel::WARNING],
         \E_USER_WARNING => ['User Warning', LogLevel::WARNING],
         \E_COMPILE_WARNING => ['Compile Warning', LogLevel::WARNING],
