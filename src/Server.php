@@ -27,13 +27,13 @@ final class Server
     public function __construct(
         private string|null $pidFile = null,
         private string|null $socketFile = null,
-        int $stopTimeout = 10,
-        float $restartDelay = 0.25,
+        int|null $stopTimeout = null,
+        float|null $restartDelay = null,
     ) {
         $this->pidFile ??= namespace\getDefaultPidFile();
         $this->socketFile ??= namespace\getDefaultSocketFile();
         $this->addPlugin(new SystemPlugin());
-        $this->addPlugin(new SupervisorPlugin($stopTimeout, $restartDelay));
+        $this->addPlugin(new SupervisorPlugin($stopTimeout ?? 10, $restartDelay ?? 0.25));
     }
 
     public function addPlugin(Plugin ...$plugins): self

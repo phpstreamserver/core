@@ -38,12 +38,22 @@ class WorkerProcess implements Process
     private int $exitCode = 0;
     public readonly int $id;
     public readonly int $pid;
+    public readonly string $name;
     public readonly ContainerInterface $container;
     public readonly LoggerInterface $logger;
     public readonly MessageBusInterface $bus;
     private DeferredFuture|null $startingFuture;
     private readonly ReloadStrategyStack $reloadStrategyStack;
     protected readonly \Closure $reloadStrategyTrigger;
+
+    /** @var array<\Closure(self): void> */
+    private array $onStartCallbacks = [];
+
+    /** @var array<\Closure(self): void> */
+    private array $onStopCallbacks = [];
+
+    /** @var array<\Closure(self): void> */
+    private array $onReloadCallbacks = [];
 
     /**
      * @template T of self
@@ -53,18 +63,34 @@ class WorkerProcess implements Process
      * @param array<ReloadStrategy> $reloadStrategies
      */
     public function __construct(
-        public string $name = 'none',
+        string $name = '',
         public readonly int $count = 1,
         public readonly bool $reloadable = true,
         private string|null $user = null,
         private string|null $group = null,
-        private \Closure|null $onStart = null,
-        private readonly \Closure|null $onStop = null,
-        private readonly \Closure|null $onReload = null,
+        \Closure|null $onStart = null,
+        \Closure|null $onStop = null,
+        \Closure|null $onReload = null,
         private array $reloadStrategies = [],
     ) {
         static $nextId = 0;
         $this->id = ++$nextId;
+
+        if ($name === '') {
+            $this->name = 'worker_' . $this->id;
+        } else {
+            $this->name = $name;
+        }
+
+        if ($onStart !== null) {
+            $this->onStart($onStart);
+        }
+        if ($onStop !== null) {
+            $this->onStop($onStop);
+        }
+        if ($onReload !== null) {
+            $this->onReload($onReload);
+        }
     }
 
     /**
@@ -139,9 +165,8 @@ class WorkerProcess implements Process
             ]))->await();
 
             EventLoop::queue(function () {
-                if ($this->onStart !== null) {
-                    /** @psalm-suppress InvalidArgument */
-                    ($this->onStart)($this);
+                foreach ($this->onStartCallbacks as $onStartCallback) {
+                    $onStartCallback($this);
                 }
             });
 
@@ -184,9 +209,8 @@ class WorkerProcess implements Process
 
         EventLoop::defer(function (): void {
             $this->startingFuture?->getFuture()->await();
-            if ($this->onStop !== null) {
-                /** @psalm-suppress InvalidArgument */
-                ($this->onStop)($this);
+            foreach ($this->onStopCallbacks as $onStopCallback) {
+                $onStopCallback($this);
             }
             EventLoop::getDriver()->stop();
         });
@@ -207,9 +231,8 @@ class WorkerProcess implements Process
 
         EventLoop::defer(function (): void {
             $this->startingFuture?->getFuture()->await();
-            if ($this->onReload !== null) {
-                /** @psalm-suppress InvalidArgument */
-                ($this->onReload)($this);
+            foreach ($this->onReloadCallbacks as $onReloadCallback) {
+                $onReloadCallback($this);
             }
             EventLoop::getDriver()->stop();
         });
@@ -218,5 +241,32 @@ class WorkerProcess implements Process
     public function addReloadStrategy(ReloadStrategy ...$reloadStrategies): void
     {
         $this->reloadStrategyStack->addReloadStrategy(...$reloadStrategies);
+    }
+
+    /**
+     * @param \Closure(self): void $onStart
+     */
+    public function onStart(\Closure $onStart, int $priority = 0): void
+    {
+        $this->onStartCallbacks[$priority . \uniqid()] = $onStart;
+        \ksort($this->onStartCallbacks);
+    }
+
+    /**
+     * @param \Closure(self): void $onStop
+     */
+    public function onStop(\Closure $onStop, int $priority = 0): void
+    {
+        $this->onStopCallbacks[$priority . \uniqid()] = $onStop;
+        \ksort($this->onStopCallbacks);
+    }
+
+    /**
+     * @param \Closure(self): void $onReload
+     */
+    public function onReload(\Closure $onReload, int $priority = 0): void
+    {
+        $this->onReloadCallbacks[$priority . \uniqid()] = $onReload;
+        \ksort($this->onReloadCallbacks);
     }
 }
