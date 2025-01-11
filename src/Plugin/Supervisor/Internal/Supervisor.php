@@ -47,12 +47,12 @@ final class Supervisor
         $this->workerPool->registerWorker($worker);
     }
 
-    public function start(Suspension $suspension, LoggerInterface $logger, MessageHandlerInterface $messageHandler, MessageBusInterface $messageBus): void
+    public function start(Suspension $suspension, LoggerInterface &$logger, MessageHandlerInterface &$messageHandler, MessageBusInterface &$messageBus): void
     {
         $this->suspension = $suspension;
-        $this->logger = $logger;
-        $this->messageHandler = $messageHandler;
-        $this->messageBus = $messageBus;
+        $this->logger = &$logger;
+        $this->messageHandler = &$messageHandler;
+        $this->messageBus = &$messageBus;
 
         SIGCHLDHandler::onChildProcessExit(weakClosure(function (int $pid, int $exitCode) {
             if (null !== $worker = $this->workerPool->getWorkerByPid($pid)) {
@@ -60,15 +60,17 @@ final class Supervisor
             }
         }));
 
-        EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, weakClosure($this->monitorWorkerStatus(...)));
+        EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $this->monitorWorkerStatus(...));
 
-        $this->messageHandler->subscribe(ProcessDetachedEvent::class, weakClosure(function (ProcessDetachedEvent $message): void {
-            $this->workerPool->markAsDetached($message->pid);
-        }));
+        EventLoop::defer(function () {
+            $this->messageHandler->subscribe(ProcessDetachedEvent::class, weakClosure(function (ProcessDetachedEvent $message): void {
+                $this->workerPool->markAsDetached($message->pid);
+            }));
 
-        $this->messageHandler->subscribe(ProcessHeartbeatEvent::class, weakClosure(function (ProcessHeartbeatEvent $message): void {
-            $this->workerPool->markAsHealthy($message->pid, $message->time);
-        }));
+            $this->messageHandler->subscribe(ProcessHeartbeatEvent::class, weakClosure(function (ProcessHeartbeatEvent $message): void {
+                $this->workerPool->markAsHealthy($message->pid, $message->time);
+            }));
+        });
 
         $this->spawnWorkers();
     }

@@ -35,7 +35,7 @@ interface ContainerInterface extends PsrContainerInterface
      * @return T
      * @throws ServiceNotFoundException
      */
-    public function getService(string $id): object;
+    public function &getService(string $id): object;
 
     /**
      * @throws ServiceNotFoundException

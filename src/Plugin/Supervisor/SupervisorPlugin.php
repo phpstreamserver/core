@@ -24,7 +24,6 @@ final class SupervisorPlugin extends Plugin
     private SupervisorStatus $supervisorStatus;
     private Supervisor $supervisor;
     private MessageHandlerInterface $handler;
-    private MessageBusInterface $bus;
 
     public function __construct(
         private readonly int $stopTimeout,
@@ -51,12 +50,12 @@ final class SupervisorPlugin extends Plugin
         /** @var Suspension $suspension */
         $suspension = $this->masterContainer->getService('main_suspension');
         /** @var LoggerInterface $logger */
-        $logger = $this->masterContainer->getService(LoggerInterface::class);
-        $this->handler = $this->masterContainer->getService(MessageHandlerInterface::class);
-        $this->bus = $this->masterContainer->getService(MessageBusInterface::class);
+        $logger = &$this->masterContainer->getService(LoggerInterface::class);
+        $this->handler = &$this->masterContainer->getService(MessageHandlerInterface::class);
+        $bus = &$this->masterContainer->getService(MessageBusInterface::class);
 
         $this->supervisorStatus->subscribeToWorkerMessages($this->handler);
-        $this->supervisor->start($suspension, $logger, $this->handler, $this->bus);
+        $this->supervisor->start($suspension, $logger, $this->handler, $bus);
 
         $supervisorStatus = $this->supervisorStatus;
         $this->handler->subscribe(GetSupervisorStatusCommand::class, static function () use ($supervisorStatus): SupervisorStatus {

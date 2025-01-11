@@ -178,11 +178,8 @@ final class MasterProcess
         $this->status = Status::STARTING;
         $this->saveMasterPid();
 
-        $this->logger = $this->masterContainer->getService(LoggerInterface::class);
-        $this->messageHandler = $this->masterContainer->getService(MessageHandlerInterface::class);
-
-        ErrorHandler::register($this->logger);
-        EventLoop::setErrorHandler(ErrorHandler::handleException(...));
+        $this->logger = &$this->masterContainer->getService(LoggerInterface::class);
+        $this->messageHandler = &$this->masterContainer->getService(MessageHandlerInterface::class);
 
         $stopCallback = function (): void { $this->stop(); };
         $reloadCallback = function (): void { $this->reload(); };
@@ -205,15 +202,18 @@ final class MasterProcess
             });
         }
 
-        $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $message) {
-            $this->stop($message->code);
-        });
-
-        $this->messageHandler->subscribe(ReloadServerCommand::class, function () {
-            $this->reload();
-        });
-
         EventLoop::defer(function () {
+            ErrorHandler::register($this->logger);
+            EventLoop::setErrorHandler(ErrorHandler::handleException(...));
+
+            $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $message) {
+                $this->stop($message->code);
+            });
+
+            $this->messageHandler->subscribe(ReloadServerCommand::class, function () {
+                $this->reload();
+            });
+
             $this->logger->info(Server::NAME . ' has started');
 
             foreach ($this->workerClassesCanNotBeHandled as $workerClass => $handledByClass) {

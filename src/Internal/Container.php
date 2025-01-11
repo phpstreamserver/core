@@ -60,7 +60,7 @@ final class Container implements ContainerInterface
      * @return T
      * @throws ServiceNotFoundException
      */
-    public function getService(string $id): object
+    public function &getService(string $id): object
     {
         if (\array_key_exists($id, $this->aliases)) {
             $id = $this->aliases[$id];
@@ -71,10 +71,9 @@ final class Container implements ContainerInterface
         }
 
         if (\array_key_exists($id, $this->factories)) {
-            $value = ($this->factories[$id])($this);
-            $this->services[$id] = $value;
+            $this->services[$id] = ($this->factories[$id])($this);
             unset($this->factories[$id]);
-            return $value;
+            return $this->services[$id];
         }
 
         throw new ServiceNotFoundException($id);
