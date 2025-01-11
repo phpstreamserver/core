@@ -7,6 +7,7 @@ namespace PHPStreamServer\Core\Plugin\Supervisor;
 use Amp\DeferredFuture;
 use PHPStreamServer\Core\Exception\UserChangeException;
 use PHPStreamServer\Core\Internal\ErrorHandler;
+use PHPStreamServer\Core\MessageBus\GracefulMessageBusInterface;
 use PHPStreamServer\Core\MessageBus\Message\CompositeMessage;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
@@ -41,10 +42,9 @@ class WorkerProcess implements Process
     public readonly string $name;
     public readonly ContainerInterface $container;
     public readonly LoggerInterface $logger;
-    public readonly MessageBusInterface $bus;
+    public readonly GracefulMessageBusInterface $bus;
     private DeferredFuture|null $startingFuture;
     private readonly ReloadStrategyStack $reloadStrategyStack;
-    protected readonly \Closure $reloadStrategyTrigger;
 
     /** @var array<\Closure(self): void> */
     private array $onStartCallbacks = [];
@@ -134,7 +134,7 @@ class WorkerProcess implements Process
         });
 
         $this->reloadStrategyStack = new ReloadStrategyStack($this->reload(...), $this->reloadStrategies);
-        $this->reloadStrategyTrigger = \Closure::fromCallable($this->reloadStrategyStack);
+        $this->container->setService('reload_strategy_emitter', $this->reloadStrategyStack->emitEvent(...));
         unset($this->reloadStrategies);
 
         $heartbeatEvent = function (): ProcessHeartbeatEvent {
@@ -212,6 +212,7 @@ class WorkerProcess implements Process
             foreach ($this->onStopCallbacks as $onStopCallback) {
                 $onStopCallback($this);
             }
+            $this->bus->stop()->await();
             EventLoop::getDriver()->stop();
         });
     }
@@ -234,6 +235,7 @@ class WorkerProcess implements Process
             foreach ($this->onReloadCallbacks as $onReloadCallback) {
                 $onReloadCallback($this);
             }
+            $this->bus->stop()->await();
             EventLoop::getDriver()->stop();
         });
     }

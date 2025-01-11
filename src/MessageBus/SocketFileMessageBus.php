@@ -14,9 +14,10 @@ use Amp\Socket\UnixAddress;
 use function Amp\async;
 use function Amp\delay;
 
-final class SocketFileMessageBus implements MessageBusInterface
+final class SocketFileMessageBus implements GracefulMessageBusInterface
 {
     private SocketConnector $connector;
+    private int $queue = 0;
 
     public function __construct(string $socketFile)
     {
@@ -31,12 +32,11 @@ final class SocketFileMessageBus implements MessageBusInterface
      */
     public function dispatch(MessageInterface $message): Future
     {
-        $connector = &$this->connector;
-
-        return async(static function () use (&$connector, &$message): mixed {
+        $this->queue++;
+        return async(function () use ($message): mixed {
             while (true) {
                 try {
-                    $socket = $connector->connect('');
+                    $socket = $this->connector->connect('');
                     break;
                 } catch (ConnectException) {
                     delay(0.01);
@@ -56,6 +56,17 @@ final class SocketFileMessageBus implements MessageBusInterface
             }
 
             return \unserialize($data);
+        })->finally(function (): void {
+            $this->queue--;
+        });
+    }
+
+    public function stop(): Future
+    {
+        return async(function (): void {
+            while ($this->queue > 0) {
+                delay(0.001);
+            }
         });
     }
 }
