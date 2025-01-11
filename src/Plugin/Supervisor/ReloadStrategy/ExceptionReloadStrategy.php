@@ -11,6 +11,7 @@ final class ExceptionReloadStrategy implements ReloadStrategy
 {
     private array $allowedExceptions = [
         'Amp\Http\Server\HttpErrorException',
+        'Symfony\Component\HttpKernel\Exception\HttpException'
     ];
 
     /**

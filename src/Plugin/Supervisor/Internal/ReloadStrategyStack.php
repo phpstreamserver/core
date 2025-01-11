@@ -16,17 +16,14 @@ final class ReloadStrategyStack
     /** @var list<ReloadStrategy> */
     private array $reloadStrategies = [];
 
+    private bool $reloadState = false;
+
     /**
      * @param array<ReloadStrategy> $reloadStrategies
      */
     public function __construct(private readonly \Closure $reloadCallback, array $reloadStrategies = [])
     {
         $this->addReloadStrategy(...$reloadStrategies);
-    }
-
-    public function __invoke(mixed $event): void
-    {
-        $this->emitEvent($event);
     }
 
     public function addReloadStrategy(ReloadStrategy ...$reloadStrategies): void
@@ -49,8 +46,13 @@ final class ReloadStrategyStack
      */
     public function emitEvent(mixed $event): void
     {
+        if ($this->reloadState) {
+            return;
+        }
+
         foreach ($this->reloadStrategies as $reloadStrategy) {
             if ($reloadStrategy->shouldReload($event)) {
+                $this->reloadState = true;
                 $this->reload();
                 break;
             }

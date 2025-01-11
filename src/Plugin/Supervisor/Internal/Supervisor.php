@@ -187,12 +187,10 @@ final class Supervisor
 
     public function reload(): void
     {
-        EventLoop::defer(function (): void {
-            foreach ($this->workerPool->getProcesses() as $process) {
-                if ($process->reloadable) {
-                    \posix_kill($process->pid, $process->detached ? SIGTERM : SIGUSR1);
-                }
+        foreach ($this->workerPool->getProcesses() as $process) {
+            if ($process->reloadable) {
+                \posix_kill($process->pid, $process->detached ? SIGTERM : SIGUSR1);
             }
-        });
+        }
     }
 }
