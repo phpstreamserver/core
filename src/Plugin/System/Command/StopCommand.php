@@ -9,13 +9,10 @@ use PHPStreamServer\Core\MessageBus\Message\StopServerCommand;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Server;
 
-/**
- * @internal
- */
-final class StopCommand extends Command
+class StopCommand extends Command
 {
-    public const COMMAND = 'stop';
-    public const DESCRIPTION = 'Stop server';
+    final public const COMMAND = 'stop';
+    final public const DESCRIPTION = 'Stop server';
 
     public function execute(array $args): int
     {

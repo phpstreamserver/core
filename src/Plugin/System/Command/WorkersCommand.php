@@ -11,13 +11,10 @@ use PHPStreamServer\Core\Plugin\Supervisor\Message\GetSupervisorStatusCommand;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\WorkerInfo;
 
-/**
- * @internal
- */
-final class WorkersCommand extends Command
+class WorkersCommand extends Command
 {
-    public const COMMAND = 'workers';
-    public const DESCRIPTION = 'Show workers status';
+    final public const COMMAND = 'workers';
+    final public const DESCRIPTION = 'Show workers status';
 
     public function execute(array $args): int
     {

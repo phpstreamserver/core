@@ -18,13 +18,10 @@ use function PHPStreamServer\Core\getStartFile;
 use function PHPStreamServer\Core\humanFileSize;
 use function PHPStreamServer\Core\isRunning;
 
-/**
- * @internal
- */
-final class StatusCommand extends Command
+class StatusCommand extends Command
 {
-    public const COMMAND = 'status';
-    public const DESCRIPTION = 'Show server status';
+    final public const COMMAND = 'status';
+    final public const DESCRIPTION = 'Show server status';
 
     public function execute(array $args): int
     {

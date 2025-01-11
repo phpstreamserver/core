@@ -9,13 +9,10 @@ use PHPStreamServer\Core\MessageBus\Message\ReloadServerCommand;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Server;
 
-/**
- * @internal
- */
-final class ReloadCommand extends Command
+class ReloadCommand extends Command
 {
-    public const COMMAND = 'reload';
-    public const DESCRIPTION = 'Reload server';
+    final public const COMMAND = 'reload';
+    final public const DESCRIPTION = 'Reload server';
 
     public function execute(array $args): int
     {

@@ -13,13 +13,10 @@ use PHPStreamServer\Core\Plugin\System\Message\GetConnectionsStatusCommand;
 
 use function PHPStreamServer\Core\humanFileSize;
 
-/**
- * @internal
- */
-final class ConnectionsCommand extends Command
+class ConnectionsCommand extends Command
 {
-    public const COMMAND = 'connections';
-    public const DESCRIPTION = 'Show active connections';
+    final public const COMMAND = 'connections';
+    final public const DESCRIPTION = 'Show active connections';
 
     public function execute(array $args): int
     {

@@ -15,13 +15,10 @@ use PHPStreamServer\Core\Plugin\System\Message\GetConnectionsStatusCommand;
 
 use function PHPStreamServer\Core\humanFileSize;
 
-/**
- * @internal
- */
-final class ProcessesCommand extends Command
+class ProcessesCommand extends Command
 {
-    public const COMMAND = 'processes';
-    public const DESCRIPTION = 'Show processes status';
+    final public const COMMAND = 'processes';
+    final public const DESCRIPTION = 'Show processes status';
 
     public function execute(array $args): int
     {

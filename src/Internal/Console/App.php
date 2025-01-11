@@ -18,7 +18,7 @@ use function PHPStreamServer\Core\getStartFile;
 final class App
 {
     /**
-     * @var array<class-string<Command>, Command>
+     * @var array<string, Command>
      */
     private array $commands = [];
 
@@ -38,9 +38,7 @@ final class App
         );
 
         foreach ($commands as $command) {
-            if (!isset($this->commands[$command::class])) {
-                $this->commands[$command::class] = $command;
-            }
+            $this->commands[$command::COMMAND] = $command;
         }
     }
 

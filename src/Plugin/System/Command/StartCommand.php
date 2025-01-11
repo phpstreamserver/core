@@ -15,13 +15,10 @@ use PHPStreamServer\Core\Server;
 
 use function PHPStreamServer\Core\getDriverName;
 
-/**
- * @internal
- */
-final class StartCommand extends Command
+class StartCommand extends Command
 {
-    public const COMMAND = 'start';
-    public const DESCRIPTION = 'Start server';
+    final public const COMMAND = 'start';
+    final public const DESCRIPTION = 'Start server';
 
     public function configure(): void
     {
