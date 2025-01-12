@@ -289,7 +289,7 @@ final class MasterProcess
         }
 
         $this->status = Status::STOPPING;
-        $this->logger->debug(Server::NAME . ' stopping ...');
+        $this->logger->info(Server::NAME . ' stopping ...');
         await(\array_map(static fn(Plugin $p) => $p->onStop(), $this->plugins));
         $this->status = Status::SHUTDOWN;
         $this->logger->info(Server::NAME . ' stopped');
