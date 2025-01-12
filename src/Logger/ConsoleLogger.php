@@ -2,12 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Internal\Logger;
+namespace PHPStreamServer\Core\Logger;
 
 use PHPStreamServer\Core\Console\Colorizer;
-use PHPStreamServer\Core\Worker\LoggerInterface;
 use Psr\Log\LoggerTrait;
-
 use function PHPStreamServer\Core\getStderr;
 
 /**

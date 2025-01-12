@@ -6,7 +6,8 @@ namespace PHPStreamServer\Core\Internal;
 
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\Console\StdoutHandler;
-use PHPStreamServer\Core\Internal\Logger\ConsoleLogger;
+use PHPStreamServer\Core\Logger\ConsoleLogger;
+use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\Message\ReloadServerCommand;
 use PHPStreamServer\Core\MessageBus\Message\StopServerCommand;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
@@ -17,14 +18,12 @@ use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Worker\ContainerInterface;
-use PHPStreamServer\Core\Worker\LoggerInterface;
 use PHPStreamServer\Core\Worker\Status;
 use Psr\Container\ContainerInterface as PsrContainerInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Driver\StreamSelectDriver;
 use Revolt\EventLoop\Suspension;
-
 use function Amp\Future\await;
 use function PHPStreamServer\Core\getStartFile;
 use function PHPStreamServer\Core\isRunning;

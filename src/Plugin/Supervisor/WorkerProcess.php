@@ -7,6 +7,7 @@ namespace PHPStreamServer\Core\Plugin\Supervisor;
 use Amp\DeferredFuture;
 use PHPStreamServer\Core\Exception\UserChangeException;
 use PHPStreamServer\Core\Internal\ErrorHandler;
+use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\GracefulMessageBusInterface;
 use PHPStreamServer\Core\MessageBus\Message\CompositeMessage;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
@@ -18,12 +19,10 @@ use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\ReloadStrategy;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Worker\ContainerInterface;
-use PHPStreamServer\Core\Worker\LoggerInterface;
 use PHPStreamServer\Core\Worker\ProcessUserChange;
 use PHPStreamServer\Core\Worker\Status;
 use Revolt\EventLoop;
 use Revolt\EventLoop\DriverFactory;
-
 use function PHPStreamServer\Core\getCurrentGroup;
 use function PHPStreamServer\Core\getCurrentUser;
 

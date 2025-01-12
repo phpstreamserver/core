@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Internal\Logger;
+namespace PHPStreamServer\Core\Logger;
 
 /**
  * @internal
