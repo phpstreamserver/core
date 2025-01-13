@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
+use PHPStreamServer\Core\Message\ProcessExitEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessExitEvent;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
-use PHPStreamServer\Core\Plugin\Supervisor\WorkerProcess;
 use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\Worker\WorkerProcess;
 use PHPStreamServer\Plugin\Metrics\Counter;
 use PHPStreamServer\Plugin\Metrics\Gauge;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
 use Revolt\EventLoop;
-
 use function Amp\weakClosure;
 
 final readonly class MetricsHandler

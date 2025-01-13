@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System\Connections;
 
+use PHPStreamServer\Core\Message\ConnectionClosedEvent;
+use PHPStreamServer\Core\Message\ConnectionCreatedEvent;
+use PHPStreamServer\Core\Message\ProcessDetachedEvent;
+use PHPStreamServer\Core\Message\ProcessSpawnedEvent;
+use PHPStreamServer\Core\Message\RequestCounterIncreaseEvent;
+use PHPStreamServer\Core\Message\RxCounterIncreaseEvent;
+use PHPStreamServer\Core\Message\TxCounterIncreaseEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessDetachedEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessSpawnedEvent;
-use PHPStreamServer\Core\Plugin\System\Message\ConnectionClosedEvent;
-use PHPStreamServer\Core\Plugin\System\Message\ConnectionCreatedEvent;
-use PHPStreamServer\Core\Plugin\System\Message\RequestCounterIncreaseEvent;
-use PHPStreamServer\Core\Plugin\System\Message\RxCounterIncreaseEvent;
-use PHPStreamServer\Core\Plugin\System\Message\TxCounterIncreaseEvent;
-
 use function Amp\weakClosure;
 
 final class ConnectionsStatus

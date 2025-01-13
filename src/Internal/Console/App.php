@@ -9,7 +9,6 @@ use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Options;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Server;
-
 use function PHPStreamServer\Core\getStartFile;
 
 /**

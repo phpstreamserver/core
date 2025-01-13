@@ -6,14 +6,14 @@ namespace PHPStreamServer\Core\Plugin\System\Connections;
 
 use Amp\Socket\InternetAddress;
 use Amp\Socket\Socket;
-use PHPStreamServer\Core\MessageBus\Message\CompositeMessage;
+use PHPStreamServer\Core\Message\CompositeMessage;
+use PHPStreamServer\Core\Message\ConnectionClosedEvent;
+use PHPStreamServer\Core\Message\ConnectionCreatedEvent;
+use PHPStreamServer\Core\Message\RequestCounterIncreaseEvent;
+use PHPStreamServer\Core\Message\RxCounterIncreaseEvent;
+use PHPStreamServer\Core\Message\TxCounterIncreaseEvent;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
-use PHPStreamServer\Core\Plugin\System\Message\ConnectionClosedEvent;
-use PHPStreamServer\Core\Plugin\System\Message\ConnectionCreatedEvent;
-use PHPStreamServer\Core\Plugin\System\Message\RequestCounterIncreaseEvent;
-use PHPStreamServer\Core\Plugin\System\Message\RxCounterIncreaseEvent;
-use PHPStreamServer\Core\Plugin\System\Message\TxCounterIncreaseEvent;
 use Revolt\EventLoop;
 
 final class NetworkTrafficCounter

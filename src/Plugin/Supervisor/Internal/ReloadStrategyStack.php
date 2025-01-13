@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
-use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\ReloadStrategy;
-use PHPStreamServer\Core\Plugin\Supervisor\ReloadStrategy\TimerReloadStrategy;
+use PHPStreamServer\Core\ReloadStrategy\ReloadStrategy;
+use PHPStreamServer\Core\ReloadStrategy\TimerReloadStrategy;
 use Revolt\EventLoop;
 
 /**

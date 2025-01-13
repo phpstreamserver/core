@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System;
 
+use PHPStreamServer\Core\Command\ConnectionsCommand;
+use PHPStreamServer\Core\Command\ReloadCommand;
+use PHPStreamServer\Core\Command\StartCommand;
+use PHPStreamServer\Core\Command\StatusCommand;
+use PHPStreamServer\Core\Command\StopCommand;
+use PHPStreamServer\Core\Command\WorkersCommand;
+use PHPStreamServer\Core\Message\GetConnectionsStatusCommand;
+use PHPStreamServer\Core\Message\GetServerStatusCommand;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
-use PHPStreamServer\Core\Plugin\System\Command\ConnectionsCommand;
-use PHPStreamServer\Core\Plugin\System\Command\ReloadCommand;
-use PHPStreamServer\Core\Plugin\System\Command\StartCommand;
-use PHPStreamServer\Core\Plugin\System\Command\StatusCommand;
-use PHPStreamServer\Core\Plugin\System\Command\StopCommand;
-use PHPStreamServer\Core\Plugin\System\Command\WorkersCommand;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
-use PHPStreamServer\Core\Plugin\System\Message\GetConnectionsStatusCommand;
-use PHPStreamServer\Core\Plugin\System\Message\GetServerStatusCommand;
 use PHPStreamServer\Core\Plugin\System\Status\ServerStatus;
 
 /**

@@ -5,17 +5,18 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\Supervisor;
 
 use Amp\Future;
+use PHPStreamServer\Core\Command\ProcessesCommand;
 use PHPStreamServer\Core\Exception\ServiceNotFoundException;
 use PHPStreamServer\Core\Logger\LoggerInterface;
+use PHPStreamServer\Core\Message\GetSupervisorStatusCommand;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
-use PHPStreamServer\Core\Plugin\Supervisor\Command\ProcessesCommand;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\MetricsHandler;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\Supervisor;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\GetSupervisorStatusCommand;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Process;
+use PHPStreamServer\Core\Worker\WorkerProcess;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
 use Revolt\EventLoop\Suspension;
 

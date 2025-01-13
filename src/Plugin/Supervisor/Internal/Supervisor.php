@@ -8,18 +8,17 @@ use Amp\DeferredFuture;
 use Amp\Future;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\SIGCHLDHandler;
+use PHPStreamServer\Core\Message\ProcessBlockedEvent;
+use PHPStreamServer\Core\Message\ProcessDetachedEvent;
+use PHPStreamServer\Core\Message\ProcessExitEvent;
+use PHPStreamServer\Core\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessBlockedEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessDetachedEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessExitEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\Message\ProcessHeartbeatEvent;
-use PHPStreamServer\Core\Plugin\Supervisor\WorkerProcess;
 use PHPStreamServer\Core\Worker\Status;
+use PHPStreamServer\Core\Worker\WorkerProcess;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
-
 use function Amp\weakClosure;
 
 /**
