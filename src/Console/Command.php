@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Console;
 
-use PHPStreamServer\Core\Internal\Console\ServerIsNotRunning;
-use PHPStreamServer\Core\Internal\Console\ServerIsRunning;
-
+use PHPStreamServer\Core\Exception\ServerIsNotRunning;
+use PHPStreamServer\Core\Exception\ServerIsRunning;
 use function PHPStreamServer\Core\isRunning;
 
 abstract class Command
