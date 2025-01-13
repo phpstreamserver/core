@@ -8,7 +8,7 @@ use PHPStreamServer\Core\Message\ProcessExitEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Server;
-use PHPStreamServer\Core\Worker\WorkerProcess;
+use PHPStreamServer\Core\WorkerProcess;
 use PHPStreamServer\Plugin\Metrics\Counter;
 use PHPStreamServer\Plugin\Metrics\Gauge;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;

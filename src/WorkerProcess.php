@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Worker;
+namespace PHPStreamServer\Core;
 
 use Amp\DeferredFuture;
 use PHPStreamServer\Core\Exception\UserChangeException;
@@ -16,13 +16,12 @@ use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\ReloadStrategyStack;
 use PHPStreamServer\Core\Plugin\Supervisor\SupervisorPlugin;
-use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\ReloadStrategy\ReloadStrategy;
-use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\Worker\ContainerInterface;
+use PHPStreamServer\Core\Worker\ProcessUserChange;
+use PHPStreamServer\Core\Worker\Status;
 use Revolt\EventLoop;
 use Revolt\EventLoop\DriverFactory;
-use function PHPStreamServer\Core\getCurrentGroup;
-use function PHPStreamServer\Core\getCurrentUser;
 
 class WorkerProcess implements Process
 {

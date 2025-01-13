@@ -15,7 +15,7 @@ use PHPStreamServer\Core\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Worker\Status;
-use PHPStreamServer\Core\Worker\WorkerProcess;
+use PHPStreamServer\Core\WorkerProcess;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
