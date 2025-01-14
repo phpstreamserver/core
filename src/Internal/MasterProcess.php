@@ -180,6 +180,8 @@ final class MasterProcess
         $this->logger = &$this->masterContainer->getService(LoggerInterface::class);
         $this->messageHandler = &$this->masterContainer->getService(MessageHandlerInterface::class);
 
+        $this->masterContainer->setParameter('pid', \posix_getpid());
+
         $stopCallback = function (): void { $this->stop(); };
         $reloadCallback = function (): void { $this->reload(); };
         EventLoop::onSignal(SIGINT, $stopCallback);

@@ -25,7 +25,7 @@ final class ExternalProcessMessageBus implements MessageBusInterface
     public function dispatch(MessageInterface $message): Future
     {
         if ($this->bus === null) {
-            if (!isRunning($this->pidFile)) {
+            if ($this->pidFile === '' || !isRunning($this->pidFile)) {
                 throw new ServerIsNotRunning();
             }
 
