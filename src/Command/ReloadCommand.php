@@ -6,7 +6,7 @@ namespace PHPStreamServer\Core\Command;
 
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Message\ReloadServerCommand;
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
+use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
 use PHPStreamServer\Core\Server;
 
 class ReloadCommand extends Command
@@ -20,9 +20,7 @@ class ReloadCommand extends Command
          * @var array{pidFile: string, socketFile: string} $args
          */
 
-        $this->assertServerIsRunning($args['pidFile']);
-
-        $bus = new SocketFileMessageBus($args['socketFile']);
+        $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
         echo Server::NAME . " reloading ...\n";
         $bus->dispatch(new ReloadServerCommand())->await();
 

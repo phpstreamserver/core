@@ -7,7 +7,7 @@ namespace PHPStreamServer\Core\Command;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Message\GetSupervisorStatusCommand;
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
+use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\WorkerInfo;
 
@@ -22,11 +22,10 @@ class WorkersCommand extends Command
          * @var array{pidFile: string, socketFile: string} $args
          */
 
-        $this->assertServerIsRunning($args['pidFile']);
+        $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
 
         echo "❯ Workers\n";
 
-        $bus = new SocketFileMessageBus($args['socketFile']);
         $supervisorStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
         \assert($supervisorStatus instanceof SupervisorStatus);
         $workers = $supervisorStatus->getWorkers();

@@ -8,7 +8,7 @@ use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Message\GetConnectionsStatusCommand;
 use PHPStreamServer\Core\Message\GetSupervisorStatusCommand;
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
+use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\ProcessInfo;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
@@ -25,11 +25,9 @@ class ProcessesCommand extends Command
          * @var array{pidFile: string, socketFile: string} $args
          */
 
-        $this->assertServerIsRunning($args['pidFile']);
+        $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
 
         echo "❯ Processes\n";
-
-        $bus = new SocketFileMessageBus($args['socketFile']);
 
         $processesStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
         \assert($processesStatus instanceof SupervisorStatus);

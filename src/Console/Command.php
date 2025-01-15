@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Console;
 
-use PHPStreamServer\Core\Exception\ServerIsNotRunning;
-use PHPStreamServer\Core\Exception\ServerIsRunning;
-use function PHPStreamServer\Core\isRunning;
-
 abstract class Command
 {
     /**
@@ -35,24 +31,4 @@ abstract class Command
      * MUST return exit code
      */
     abstract public function execute(array $args): int;
-
-    /**
-     * Ensure the server is running. Otherwise exit with error.
-     */
-    final public function assertServerIsRunning(string $pidFile): void
-    {
-        if (!isRunning($pidFile)) {
-            throw new ServerIsNotRunning();
-        }
-    }
-
-    /**
-     * Ensure the server is NOT running. Otherwise exit with error.
-     */
-    final public function assertServerIsNotRunning(string $pidFile): void
-    {
-        if (isRunning($pidFile)) {
-            throw new ServerIsRunning();
-        }
-    }
 }

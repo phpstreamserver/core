@@ -6,6 +6,7 @@ namespace PHPStreamServer\Core\Command;
 
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
+use PHPStreamServer\Core\Exception\ServerIsRunning;
 use PHPStreamServer\Core\Internal\MasterProcess;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
@@ -13,6 +14,7 @@ use PHPStreamServer\Core\Plugin\Supervisor\Status\WorkerInfo;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
 use function PHPStreamServer\Core\getDriverName;
+use function PHPStreamServer\Core\isRunning;
 
 class StartCommand extends Command
 {
@@ -36,7 +38,9 @@ class StartCommand extends Command
          * } $args
          */
 
-        $this->assertServerIsNotRunning($args['pidFile']);
+        if (isRunning($args['pidFile'])) {
+            throw new ServerIsRunning();
+        }
 
         $daemonize = (bool) $this->options->getOption('daemon');
 
