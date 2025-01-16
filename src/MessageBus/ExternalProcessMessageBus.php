@@ -10,27 +10,28 @@ use function PHPStreamServer\Core\isRunning;
 
 final class ExternalProcessMessageBus implements MessageBusInterface
 {
-    private MessageBusInterface $bus;
+    private MessageBusInterface|null $bus = null;
 
-    /**
-     * @throws ServerIsNotRunning
-     */
-    public function __construct(string $pidFile, string $socketFile)
+    public function __construct(private string $pidFile, private string $socketFile)
     {
-        if ($pidFile === '' || $socketFile === '' || !isRunning($pidFile) || !\file_exists($socketFile)) {
-            throw new ServerIsNotRunning();
-        }
-
-        $this->bus = new SocketFileMessageBus($socketFile);
     }
 
     /**
      * @template T
      * @param MessageInterface<T> $message
      * @return Future<T>
+     * @throws ServerIsNotRunning
      */
     public function dispatch(MessageInterface $message): Future
     {
+        if ($this->bus === null) {
+             if ($this->pidFile === '' || $this->socketFile === '' || !isRunning($this->pidFile) || !\file_exists($this->socketFile)) {
+                 throw new ServerIsNotRunning();
+             }
+
+            $this->bus = new SocketFileMessageBus($this->socketFile);
+        }
+
         return $this->bus->dispatch($message);
     }
 }

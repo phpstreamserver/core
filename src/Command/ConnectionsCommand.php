@@ -25,12 +25,11 @@ class ConnectionsCommand extends Command
 
         $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
 
-        echo "❯ Connections\n";
-
         $connectionsStatus = $bus->dispatch(new GetConnectionsStatusCommand())->await();
         \assert($connectionsStatus instanceof ConnectionsStatus);
-
         $connections = $connectionsStatus->getActiveConnections();
+
+        echo "❯ Connections\n";
 
         if (\count($connections) > 0) {
             echo (new Table(indent: 1))

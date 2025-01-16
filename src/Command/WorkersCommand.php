@@ -24,11 +24,11 @@ class WorkersCommand extends Command
 
         $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
 
-        echo "❯ Workers\n";
-
         $supervisorStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
         \assert($supervisorStatus instanceof SupervisorStatus);
         $workers = $supervisorStatus->getWorkers();
+
+        echo "❯ Workers\n";
 
         if (\count($workers) > 0) {
             echo (new Table(indent: 1))

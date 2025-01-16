@@ -27,13 +27,13 @@ class ProcessesCommand extends Command
 
         $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
 
-        echo "❯ Processes\n";
-
         $processesStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
         \assert($processesStatus instanceof SupervisorStatus);
 
         $connectionsStatus = $bus->dispatch(new GetConnectionsStatusCommand())->await();
         \assert($connectionsStatus instanceof ConnectionsStatus);
+
+        echo "❯ Processes\n";
 
         if ($processesStatus->getProcessesCount() > 0) {
             $processes = $processesStatus->getProcesses();

@@ -23,6 +23,7 @@ class ReloadCommand extends Command
         $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
         echo Server::NAME . " reloading ...\n";
         $bus->dispatch(new ReloadServerCommand())->await();
+        echo Server::NAME . " reloaded\n";
 
         return 0;
     }
