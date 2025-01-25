@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal;
 
+use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\Console\StdoutHandler;
 use PHPStreamServer\Core\Logger\ConsoleLogger;
@@ -17,8 +18,6 @@ use PHPStreamServer\Core\MessageBus\SocketFileMessageHandler;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
-use PHPStreamServer\Core\Worker\ContainerInterface;
-use PHPStreamServer\Core\Worker\Status;
 use Psr\Container\ContainerInterface as PsrContainerInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
 use Revolt\EventLoop;

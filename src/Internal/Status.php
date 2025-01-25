@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Worker;
+namespace PHPStreamServer\Core\Internal;
 
 enum Status
 {

@@ -10,7 +10,7 @@ use PHPStreamServer\Core\Message\ProcessExitEvent;
 use PHPStreamServer\Core\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\Message\ProcessSpawnedEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
-use PHPStreamServer\Core\WorkerProcess;
+use PHPStreamServer\Core\Worker\WorkerProcess;
 use Revolt\EventLoop;
 use function Amp\weakClosure;
 use function PHPStreamServer\Core\getMemoryUsageByPid;

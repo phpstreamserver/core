@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core;
+namespace PHPStreamServer\Core\Worker;
 
 use PHPStreamServer\Core\Message\ProcessDetachedEvent;
+use function PHPStreamServer\Core\getAbsoluteBinaryPath;
 
 class ExternalProcess extends WorkerProcess
 {

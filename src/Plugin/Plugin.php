@@ -6,9 +6,9 @@ namespace PHPStreamServer\Core\Plugin;
 
 use Amp\Future;
 use PHPStreamServer\Core\Console\Command;
+use PHPStreamServer\Core\ContainerInterface;
+use PHPStreamServer\Core\Internal\Status;
 use PHPStreamServer\Core\Process;
-use PHPStreamServer\Core\Worker\ContainerInterface;
-use PHPStreamServer\Core\Worker\Status;
 
 abstract class Plugin
 {

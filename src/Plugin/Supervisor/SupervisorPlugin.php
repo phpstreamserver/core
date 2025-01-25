@@ -16,7 +16,7 @@ use PHPStreamServer\Core\Plugin\Supervisor\Internal\MetricsHandler;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\Supervisor;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Process;
-use PHPStreamServer\Core\WorkerProcess;
+use PHPStreamServer\Core\Worker\WorkerProcess;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
 use Revolt\EventLoop\Suspension;
 

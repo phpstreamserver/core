@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal;
 
+use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Exception\ParameterNotFoundException;
 use PHPStreamServer\Core\Exception\ServiceNotFoundException;
-use PHPStreamServer\Core\Worker\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 final class Container implements ContainerInterface

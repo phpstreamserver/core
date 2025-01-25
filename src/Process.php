@@ -7,7 +7,6 @@ namespace PHPStreamServer\Core;
 use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
-use PHPStreamServer\Core\Worker\ContainerInterface;
 
 interface Process
 {
