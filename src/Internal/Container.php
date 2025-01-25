@@ -9,6 +9,9 @@ use PHPStreamServer\Core\Exception\ParameterNotFoundException;
 use PHPStreamServer\Core\Exception\ServiceNotFoundException;
 use Psr\Container\NotFoundExceptionInterface;
 
+/**
+ * @internal
+ */
 final class Container implements ContainerInterface
 {
     private array $factories = [];

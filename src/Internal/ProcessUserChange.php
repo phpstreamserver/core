@@ -7,6 +7,9 @@ namespace PHPStreamServer\Core\Internal;
 use PHPStreamServer\Core\Exception\UserChangeException;
 use function PHPStreamServer\Core\getCurrentUser;
 
+/**
+ * @internal
+ */
 trait ProcessUserChange
 {
     /**
