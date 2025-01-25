@@ -13,7 +13,9 @@ interface Process
 {
     public function run(ContainerInterface $workerContainer): int;
 
-    /** @return list<class-string<Plugin>> */
+    /**
+     * @return list<class-string<Plugin>>
+     */
     public static function handleBy(): array;
 
     public function getPid(): int;

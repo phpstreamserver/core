@@ -41,9 +41,9 @@ final class Supervisor
         $this->workerPool = new WorkerPool();
     }
 
-    public function addWorker(WorkerProcess $worker): void
+    public function addWorker(WorkerProcess $process): void
     {
-        $this->workerPool->registerWorker($worker);
+        $this->workerPool->registerWorker($process);
     }
 
     public function start(Suspension $suspension, LoggerInterface &$logger, MessageHandlerInterface &$messageHandler, MessageBusInterface &$messageBus): void
@@ -55,7 +55,7 @@ final class Supervisor
 
         SIGCHLDHandler::onChildProcessExit(weakClosure(function (int $pid, int $exitCode) {
             if (null !== $worker = $this->workerPool->getWorkerByPid($pid)) {
-                $this->onWorkerStop($worker, $pid, $exitCode);
+                $this->onProcessStop($worker, $pid, $exitCode);
             }
         }));
 
@@ -71,15 +71,15 @@ final class Supervisor
             }));
         });
 
-        $this->spawnWorkers();
+        $this->spawnProcesses();
     }
 
-    private function spawnWorkers(): void
+    private function spawnProcesses(): void
     {
         EventLoop::defer(function (): void {
             foreach ($this->workerPool->getRegisteredWorkers() as $worker) {
                 while (\iterator_count($this->workerPool->getAliveWorkerPids($worker)) < $worker->count) {
-                    if ($this->spawnWorker($worker)) {
+                    if ($this->spawnProcess($worker)) {
                         return;
                     }
                 }
@@ -87,16 +87,16 @@ final class Supervisor
         });
     }
 
-    private function spawnWorker(WorkerProcess $worker): bool
+    private function spawnProcess(WorkerProcess $process): bool
     {
         $pid = \pcntl_fork();
         if ($pid > 0) {
             // Master process
-            $this->onWorkerStart($worker, $pid);
+            $this->onProcessStart($process, $pid);
             return false;
         } elseif ($pid === 0) {
             // Child process
-            $this->suspension->resume($worker);
+            $this->suspension->resume($process);
             return true;
         } else {
             throw new PHPStreamServerException('fork fail');
@@ -122,12 +122,12 @@ final class Supervisor
         }
     }
 
-    private function onWorkerStart(WorkerProcess $worker, int $pid): void
+    private function onProcessStart(WorkerProcess $process, int $pid): void
     {
-        $this->workerPool->addChild($worker, $pid);
+        $this->workerPool->addChild($process, $pid);
     }
 
-    private function onWorkerStop(WorkerProcess $worker, int $pid, int $exitCode): void
+    private function onProcessStop(WorkerProcess $process, int $pid, int $exitCode): void
     {
         $this->workerPool->markAsDeleted($pid);
 
@@ -137,16 +137,16 @@ final class Supervisor
 
         if ($this->status === Status::RUNNING) {
             if ($exitCode === 0) {
-                $this->logger->info(\sprintf('Worker %s[pid:%d] exit with code %s', $worker->name, $pid, $exitCode));
-            } elseif ($exitCode === $worker::RELOAD_EXIT_CODE && $worker->reloadable) {
-                $this->logger->info(\sprintf('Worker %s[pid:%d] reloaded', $worker->name, $pid));
+                $this->logger->info(\sprintf('Worker %s[pid:%d] exit with code %s', $process->name, $pid, $exitCode));
+            } elseif ($exitCode === $process::RELOAD_EXIT_CODE && $process->reloadable) {
+                $this->logger->info(\sprintf('Worker %s[pid:%d] reloaded', $process->name, $pid));
             } else {
-                $this->logger->warning(\sprintf('Worker %s[pid:%d] exit with code %s', $worker->name, $pid, $exitCode));
+                $this->logger->warning(\sprintf('Worker %s[pid:%d] exit with code %s', $process->name, $pid, $exitCode));
             }
 
             // Restart worker
-            EventLoop::delay(\max($this->restartDelay, 0), function () use ($worker): void {
-                $this->spawnWorker($worker);
+            EventLoop::delay(\max($this->restartDelay, 0), function () use ($process): void {
+                $this->spawnProcess($process);
             });
         } else {
             if ($this->workerPool->getProcessesCount() === 0) {

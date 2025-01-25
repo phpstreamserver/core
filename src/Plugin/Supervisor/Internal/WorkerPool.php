@@ -30,19 +30,19 @@ final class WorkerPool
     {
     }
 
-    public function registerWorker(WorkerProcess $worker): void
+    public function registerWorker(WorkerProcess $process): void
     {
-        $this->workerPool[$worker->id] = $worker;
-        $this->processStatusMap[$worker->id] = [];
+        $this->workerPool[$process->id] = $process;
+        $this->processStatusMap[$process->id] = [];
     }
 
-    public function addChild(WorkerProcess $worker, int $pid): void
+    public function addChild(WorkerProcess $process, int $pid): void
     {
-        if (!isset($this->workerPool[$worker->id])) {
+        if (!isset($this->workerPool[$process->id])) {
             throw new PHPStreamServerException('Worker is not found in pool');
         }
 
-        $this->processStatusMap[$worker->id][$pid] = new ProcessStatus($pid, $worker->reloadable);
+        $this->processStatusMap[$process->id][$pid] = new ProcessStatus($pid, $process->reloadable);
     }
 
     public function markAsDeleted(int $pid): void
@@ -101,9 +101,9 @@ final class WorkerPool
     /**
      * @return \Iterator<int>
      */
-    public function getAliveWorkerPids(WorkerProcess $worker): \Iterator
+    public function getAliveWorkerPids(WorkerProcess $process): \Iterator
     {
-        return new \ArrayIterator(\array_keys($this->processStatusMap[$worker->id] ?? []));
+        return new \ArrayIterator(\array_keys($this->processStatusMap[$process->id] ?? []));
     }
 
     /**
