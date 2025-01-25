@@ -184,6 +184,16 @@ class WorkerProcess implements Process
         return [SupervisorPlugin::class];
     }
 
+    public function getPid(): int
+    {
+        return $this->pid;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
     final public function getUser(): string
     {
         return $this->user ?? getCurrentUser();
@@ -192,6 +202,21 @@ class WorkerProcess implements Process
     final public function getGroup(): string
     {
         return $this->group ?? getCurrentGroup();
+    }
+
+    public function getContainer(): ContainerInterface
+    {
+        return $this->container;
+    }
+
+    public function getLogger(): LoggerInterface
+    {
+        return $this->logger;
+    }
+
+    public function getMessageBus(): MessageBusInterface
+    {
+        return $this->bus;
     }
 
     public function stop(int $code = 0): void
