@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Worker;
 
-use;
 use Amp\DeferredFuture;
 use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Exception\UserChangeException;
@@ -22,6 +21,7 @@ use PHPStreamServer\Core\Plugin\Supervisor\Internal\ReloadStrategyStack;
 use PHPStreamServer\Core\Plugin\Supervisor\SupervisorPlugin;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\ReloadStrategy\ReloadStrategy;
+use PHPStreamServer\Core\Server;
 use Revolt\EventLoop;
 use Revolt\EventLoop\DriverFactory;
 use function PHPStreamServer\Core\getCurrentGroup;
