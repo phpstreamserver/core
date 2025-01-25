@@ -9,17 +9,19 @@ use PHPStreamServer\Core\Message\ProcessDetachedEvent;
 class ExternalProcess extends WorkerProcess
 {
     public function __construct(
-        string $name = 'none',
+        string $name = '',
         int $count = 1,
         bool $reloadable = true,
         string|null $user = null,
         string|null $group = null,
         private readonly string $command = '',
     ) {
-        parent::__construct(name: $name, count: $count, reloadable: $reloadable, user: $user, group: $group, onStart: $this->onStart(...));
+        parent::__construct(name: $name, count: $count, reloadable: $reloadable, user: $user, group: $group);
+
+        $this->onStart($this->startProcess(...));
     }
 
-    private function onStart(): void
+    private function startProcess(): void
     {
         $this->bus->dispatch(new ProcessDetachedEvent($this->pid))->await();
 
