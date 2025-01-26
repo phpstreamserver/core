@@ -46,20 +46,25 @@ class WorkerProcess implements Process
     private DeferredFuture|null $startingFuture;
     private readonly ReloadStrategyStack $reloadStrategyStack;
 
-    /** @var array<\Closure(self): void> */
+    /**
+     * @var array<\Closure(static): void>
+     */
     private array $onStartCallbacks = [];
 
-    /** @var array<\Closure(self): void> */
+    /**
+     * @var array<\Closure(static): void>
+     */
     private array $onStopCallbacks = [];
 
-    /** @var array<\Closure(self): void> */
+    /**
+     * @var array<\Closure(static): void>
+     */
     private array $onReloadCallbacks = [];
 
     /**
-     * @template T of self
-     * @param null|\Closure(T):void $onStart
-     * @param null|\Closure(T):void $onStop
-     * @param null|\Closure(T):void $onReload
+     * @param null|\Closure(static):void $onStart
+     * @param null|\Closure(static):void $onStop
+     * @param null|\Closure(static):void $onReload
      * @param array<ReloadStrategy> $reloadStrategies
      */
     public function __construct(
@@ -109,6 +114,7 @@ class WorkerProcess implements Process
         $this->pid = \posix_getpid();
         $this->container = $workerContainer;
         $this->logger = $workerContainer->getService(LoggerInterface::class);
+        /** @var GracefulMessageBusInterface */
         $this->bus = $workerContainer->getService(MessageBusInterface::class);
 
         ErrorHandler::register($this->logger);
@@ -271,7 +277,7 @@ class WorkerProcess implements Process
     }
 
     /**
-     * @param \Closure(self): void $onStart
+     * @param \Closure(static): void $onStart
      */
     public function onStart(\Closure $onStart, int $priority = 0): void
     {
@@ -280,7 +286,7 @@ class WorkerProcess implements Process
     }
 
     /**
-     * @param \Closure(self): void $onStop
+     * @param \Closure(static): void $onStop
      */
     public function onStop(\Closure $onStop, int $priority = 0): void
     {
@@ -289,7 +295,7 @@ class WorkerProcess implements Process
     }
 
     /**
-     * @param \Closure(self): void $onReload
+     * @param \Closure(static): void $onReload
      */
     public function onReload(\Closure $onReload, int $priority = 0): void
     {
