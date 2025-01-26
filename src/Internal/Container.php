@@ -62,6 +62,7 @@ final class Container implements ContainerInterface
      * @psalm-return (T is string ? object : T)
      * @return T
      * @throws ServiceNotFoundException
+     * @psalm-suppress NonVariableReferenceReturn
      */
     public function &getService(string $id): object
     {
