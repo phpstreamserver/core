@@ -13,6 +13,7 @@ use PHPStreamServer\Plugin\Metrics\Counter;
 use PHPStreamServer\Plugin\Metrics\Gauge;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
 use Revolt\EventLoop;
+
 use function Amp\weakClosure;
 
 final readonly class MetricsHandler

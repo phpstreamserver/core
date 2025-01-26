@@ -6,6 +6,7 @@ namespace PHPStreamServer\Core\Logger;
 
 use PHPStreamServer\Core\Console\Colorizer;
 use Psr\Log\LoggerTrait;
+
 use function PHPStreamServer\Core\getStderr;
 
 /**

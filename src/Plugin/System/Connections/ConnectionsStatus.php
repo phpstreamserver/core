@@ -12,6 +12,7 @@ use PHPStreamServer\Core\Message\RequestCounterIncreaseEvent;
 use PHPStreamServer\Core\Message\RxCounterIncreaseEvent;
 use PHPStreamServer\Core\Message\TxCounterIncreaseEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
+
 use function Amp\weakClosure;
 
 final class ConnectionsStatus

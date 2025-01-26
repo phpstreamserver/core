@@ -6,6 +6,7 @@ namespace PHPStreamServer\Core\MessageBus;
 
 use Amp\Future;
 use PHPStreamServer\Core\Exception\ServerIsNotRunning;
+
 use function PHPStreamServer\Core\isRunning;
 
 final class ExternalProcessMessageBus implements MessageBusInterface
@@ -25,9 +26,9 @@ final class ExternalProcessMessageBus implements MessageBusInterface
     public function dispatch(MessageInterface $message): Future
     {
         if ($this->bus === null) {
-             if ($this->pidFile === '' || $this->socketFile === '' || !isRunning($this->pidFile) || !\file_exists($this->socketFile)) {
-                 throw new ServerIsNotRunning();
-             }
+            if ($this->pidFile === '' || $this->socketFile === '' || !isRunning($this->pidFile) || !\file_exists($this->socketFile)) {
+                throw new ServerIsNotRunning();
+            }
 
             $this->bus = new SocketFileMessageBus($this->socketFile);
         }

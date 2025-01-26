@@ -23,6 +23,7 @@ use Psr\Log\LoggerInterface as PsrLoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Driver\StreamSelectDriver;
 use Revolt\EventLoop\Suspension;
+
 use function Amp\Future\await;
 use function PHPStreamServer\Core\getStartFile;
 use function PHPStreamServer\Core\isRunning;

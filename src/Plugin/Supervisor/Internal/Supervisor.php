@@ -19,6 +19,7 @@ use PHPStreamServer\Core\Worker\WorkerProcess;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
+
 use function Amp\weakClosure;
 
 /**

@@ -24,6 +24,7 @@ use PHPStreamServer\Core\ReloadStrategy\ReloadStrategy;
 use PHPStreamServer\Core\Server;
 use Revolt\EventLoop;
 use Revolt\EventLoop\DriverFactory;
+
 use function PHPStreamServer\Core\getCurrentGroup;
 use function PHPStreamServer\Core\getCurrentUser;
 
