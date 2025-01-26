@@ -36,7 +36,9 @@ Here is an example of a simple supervisor server configuration.
 ```php
 // server.php
 
-use PHPStreamServer\Core\Server;use PHPStreamServer\Core\Worker\ExternalProcess;use PHPStreamServer\Core\Worker\WorkerProcess;
+use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\Worker\ExternalProcess;
+use PHPStreamServer\Core\Worker\WorkerProcess;
 
 $server = new Server();
 
