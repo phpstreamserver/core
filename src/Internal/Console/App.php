@@ -25,13 +25,12 @@ final class App
     private array $commands = [];
 
     private string|null $command = null;
-    private array $parsedOptions = [];
     private Options $options;
 
     public function __construct(Command ...$commands)
     {
         $this->options = new Options(
-            parsedOptions: $this->parsedOptions,
+            argv: $_SERVER['argv'] ?? [],
             defaultOptionDefinitions: [
                 new OptionDefinition('help', 'h', 'Show help'),
                 new OptionDefinition('quiet', 'q', 'Do not output any message'),
@@ -44,38 +43,9 @@ final class App
         }
     }
 
-    private function getArgvs(): array
-    {
-        $argv = $_SERVER['argv'] ?? [];
-        unset($argv[0]);
-        return \array_values($argv);
-    }
-
-    private function parseArgvs(array $arguments): array
-    {
-        $options = [];
-        for ($i = 0; $i < \count($arguments); $i++) {
-            if (\str_starts_with($arguments[$i], '--')) {
-                $optionParts = \explode('=', \substr($arguments[$i], 2), 2);
-                $options[$optionParts[0]] = $optionParts[1] ?? true;
-            } elseif (\str_starts_with($arguments[$i], '-')) {
-                $splitOtions = \str_split(\substr($arguments[$i], 1));
-                foreach ($splitOtions as $option) {
-                    $options[$option] = true;
-                    if (isset($arguments[$i + 1]) && !\str_starts_with($arguments[$i + 1], '-') && \count($splitOtions) === 1) {
-                        $options[$option] = $arguments[++$i];
-                    }
-                }
-            }
-        }
-        return $options;
-    }
-
     public function run(\WeakMap $args): int
     {
-        $argv = $this->getArgvs();
-        $this->parsedOptions = $this->parseArgvs($argv);
-        $cmdCommand = $argv[0] ?? null;
+        $cmdCommand = $_SERVER['argv'][1] ?? null;
         if ($cmdCommand !== null && !\str_starts_with($cmdCommand, '-')) {
             $this->command = $cmdCommand;
         }
