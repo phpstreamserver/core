@@ -17,12 +17,12 @@
         "php": ">=8.2",
         "ext-pcntl": "*",
         "ext-posix": "*",
-        "amphp/amp": "^3.0.2",
-        "amphp/byte-stream": "^2.1.1",
-        "amphp/socket": "^2.3.1",
+        "amphp/amp": "^3.0",
+        "amphp/byte-stream": "^2.1",
+        "amphp/socket": "^2.3",
         "psr/container": "^2.0",
         "psr/log": "^3.0",
-        "revolt/event-loop": "^1.0.6"
+        "revolt/event-loop": "^1.0"
     },
     "autoload": {
         "psr-4": {
