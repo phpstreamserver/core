@@ -64,13 +64,13 @@ final class Server
     {
         static $version;
         try {
-            return $version ??= InstalledVersions::getVersion(self::PACKAGE) ?? 'dev';
+            return $version ??= \ltrim(InstalledVersions::getPrettyVersion(self::PACKAGE) ?? 'dev', 'v');
         } catch (\OutOfBoundsException) {
             return $version ??= 'dev';
         }
     }
 
-    public static function getVersionString(): string
+    public static function getProductName(): string
     {
         return \sprintf('%s/%s', \strtolower(self::NAME), self::getVersion());
     }
