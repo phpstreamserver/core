@@ -124,6 +124,6 @@ final class SupervisorStatus
 
     public function getTotalMemory(): int
     {
-        return (int) \array_sum(\array_map(static fn(ProcessInfo $p): int => $p->memory, $this->processes));
+        return \array_sum(\array_map(static fn(ProcessInfo $p): int => $p->memory, $this->processes));
     }
 }
