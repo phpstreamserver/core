@@ -283,7 +283,7 @@ class WorkerProcess implements Process
     public function onStart(\Closure $onStart, int $priority = 0): void
     {
         $this->onStartCallbacks[$priority . \uniqid()] = $onStart;
-        \ksort($this->onStartCallbacks);
+        \ksort($this->onStartCallbacks, SORT_NUMERIC);
     }
 
     /**
@@ -292,7 +292,7 @@ class WorkerProcess implements Process
     public function onStop(\Closure $onStop, int $priority = 0): void
     {
         $this->onStopCallbacks[$priority . \uniqid()] = $onStop;
-        \ksort($this->onStopCallbacks);
+        \ksort($this->onStopCallbacks, SORT_NUMERIC);
     }
 
     /**
@@ -301,6 +301,6 @@ class WorkerProcess implements Process
     public function onReload(\Closure $onReload, int $priority = 0): void
     {
         $this->onReloadCallbacks[$priority . \uniqid()] = $onReload;
-        \ksort($this->onReloadCallbacks);
+        \ksort($this->onReloadCallbacks, SORT_NUMERIC);
     }
 }
