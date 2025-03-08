@@ -172,8 +172,15 @@ class WorkerProcess implements Process
             ]))->await();
 
             EventLoop::queue(function () {
-                foreach ($this->onStartCallbacks as $onStartCallback) {
-                    $onStartCallback($this);
+                try {
+                    foreach ($this->onStartCallbacks as $onStartCallback) {
+                        $onStartCallback($this);
+                    }
+                } catch (\CompileError $e) {
+                    $this->onStartCallbacks = [];
+                    $this->onStopCallbacks = [];
+                    $this->onReloadCallbacks = [];
+                    throw $e;
                 }
             });
 

@@ -10,6 +10,7 @@ namespace PHPStreamServer\Core\ReloadStrategy;
 final class ExceptionReloadStrategy implements ReloadStrategy
 {
     private array $allowedExceptions = [
+        \ParseError::class,
         'Amp\Http\Server\HttpErrorException',
         'Symfony\Component\HttpKernel\Exception\HttpException',
     ];
