@@ -18,7 +18,7 @@ use Revolt\EventLoop;
 
 final class NetworkTrafficCounter
 {
-    private const MAX_FLUSH_TIME = 0.5;
+    private const FLUSH_PERIOD = 0.5;
 
     /**
      * @var list<MessageInterface>
@@ -60,7 +60,7 @@ final class NetworkTrafficCounter
     }
 
     /**
-     * @param int<0, max> $val
+     * @param positive-int $val
      */
     public function incRx(Socket $socket, int $val): void
     {
@@ -72,7 +72,7 @@ final class NetworkTrafficCounter
     }
 
     /**
-     * @param int<0, max> $val
+     * @param positive-int $val
      */
     public function incTx(Socket $socket, int $val): void
     {
@@ -84,7 +84,7 @@ final class NetworkTrafficCounter
     }
 
     /**
-     * @param int<0, max> $val
+     * @param positive-int $val
      */
     public function incRequests(int $val = 1): void
     {
@@ -99,14 +99,16 @@ final class NetworkTrafficCounter
         $this->queue[] = $message;
 
         if ($this->callbackId === '') {
-            $this->callbackId = EventLoop::delay(self::MAX_FLUSH_TIME, fn() => $this->flush());
+            $this->callbackId = EventLoop::delay(self::FLUSH_PERIOD, fn() => $this->flush());
         }
     }
 
     private function flush(): void
     {
+        if ($this->callbackId !== '') {
+            EventLoop::cancel($this->callbackId);
+        }
         $queue = $this->queue;
-        EventLoop::cancel($this->callbackId);
         $this->queue = [];
         $this->callbackId = '';
         $this->messageBus->dispatch(new CompositeMessage($queue));

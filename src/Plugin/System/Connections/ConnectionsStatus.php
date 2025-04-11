@@ -39,13 +39,19 @@ final class ConnectionsStatus
         }));
 
         $handler->subscribe(RxCounterIncreaseEvent::class, weakClosure(function (RxCounterIncreaseEvent $message): void {
-            $this->processConnections[$message->pid]->connections[$message->connectionId]->rx += $message->rx;
-            $this->processConnections[$message->pid]->rx += $message->rx;
+            $processConnection = $this->processConnections[$message->pid];
+            if (isset($processConnection->connections[$message->connectionId])) {
+                $processConnection->connections[$message->connectionId]->rx += $message->rx;
+            }
+            $processConnection->rx += $message->rx;
         }));
 
         $handler->subscribe(TxCounterIncreaseEvent::class, weakClosure(function (TxCounterIncreaseEvent $message): void {
-            $this->processConnections[$message->pid]->connections[$message->connectionId]->tx += $message->tx;
-            $this->processConnections[$message->pid]->tx += $message->tx;
+            $processConnection = $this->processConnections[$message->pid];
+            if (isset($processConnection->connections[$message->connectionId])) {
+                $processConnection->connections[$message->connectionId]->tx += $message->tx;
+            }
+            $processConnection->tx += $message->tx;
         }));
 
         $handler->subscribe(RequestCounterIncreaseEvent::class, weakClosure(function (RequestCounterIncreaseEvent $message): void {
