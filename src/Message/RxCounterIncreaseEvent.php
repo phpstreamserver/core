@@ -17,4 +17,20 @@ final readonly class RxCounterIncreaseEvent implements MessageInterface
         public int $rx,
     ) {
     }
+
+    public function __serialize(): array
+    {
+        return [
+            0 => $this->pid,
+            1 => $this->connectionId,
+            2 => $this->rx,
+        ];
+    }
+
+    public function __unserialize(array $data): void
+    {
+        $this->pid = $data[0];
+        $this->connectionId = $data[1];
+        $this->rx = $data[2];
+    }
 }

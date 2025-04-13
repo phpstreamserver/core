@@ -16,4 +16,18 @@ final readonly class RequestCounterIncreaseEvent implements MessageInterface
         public int $requests,
     ) {
     }
+
+    public function __serialize(): array
+    {
+        return [
+            0 => $this->pid,
+            1 => $this->requests,
+        ];
+    }
+
+    public function __unserialize(array $data): void
+    {
+        $this->pid = $data[0];
+        $this->requests = $data[1];
+    }
 }

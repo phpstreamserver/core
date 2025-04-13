@@ -43,16 +43,27 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
                 }
             }
 
-            $serializedWriteData = \serialize($message);
-            $socket->write(\pack('Va*', \strlen($serializedWriteData), $serializedWriteData));
+            $serializedMessage = \serialize($message);
+            $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > SocketFileMessageHandler::COMPRESS_FROM;
+
+            if ($compressMessage) {
+                $serializedMessage = \gzdeflate($serializedMessage, 1);
+            }
+
+            $socket->write(\pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage));
 
             $data = $socket->read(limit: SocketFileMessageHandler::CHUNK_SIZE);
             \assert(\is_string($data));
 
-            ['size' => $size, 'data' => $data] = \unpack('Vsize/a*data', $data);
+            ['size' => $size, 'gzip' => $compressed, 'data' => $data] = \unpack('Vsize/vgzip/a*data', $data);
 
-            while (\strlen($data) < $size) {
+            $i = 0;
+            while (\strlen($data) < $size && $i++ < 5000) {
                 $data .= $socket->read(limit: SocketFileMessageHandler::CHUNK_SIZE);
+            }
+
+            if ($compressed) {
+                $data = \gzinflate($data);
             }
 
             return \unserialize($data);

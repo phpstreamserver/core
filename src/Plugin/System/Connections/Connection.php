@@ -17,4 +17,31 @@ final class Connection
         public int $tx = 0,
     ) {
     }
+
+    public function __serialize(): array
+    {
+        return [
+            0 => $this->pid,
+            1 => $this->connectedAt->getTimestamp(),
+            2 => $this->localIp,
+            3 => $this->localPort,
+            4 => $this->remoteIp,
+            5 => $this->remotePort,
+            6 => $this->rx,
+            7 => $this->tx,
+        ];
+    }
+
+    public function __unserialize(array $data): void
+    {
+        $this->pid = $data[0];
+        /** @psalm-suppress PossiblyFalsePropertyAssignmentValue */
+        $this->connectedAt = \DateTimeImmutable::createFromFormat('U', (string) $data[1]);
+        $this->localIp = $data[2];
+        $this->localPort = $data[3];
+        $this->remoteIp = $data[4];
+        $this->remotePort = $data[5];
+        $this->rx = $data[6];
+        $this->tx = $data[7];
+    }
 }

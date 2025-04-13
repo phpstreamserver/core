@@ -18,6 +18,7 @@ use function Amp\weakClosure;
 final class SocketFileMessageHandler implements MessageHandlerInterface, MessageBusInterface
 {
     public const CHUNK_SIZE = 65536;
+    public const COMPRESS_FROM = 8192;
 
     private ResourceServerSocket $socket;
 
@@ -25,8 +26,6 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
      * @var array<class-string, array<int, \Closure>>
      */
     private array $subscribers = [];
-
-    private string $callbackId;
 
     public function __construct(string $socketFile)
     {
@@ -36,7 +35,7 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
 
         \chmod($socketFile, 0666);
 
-        $this->callbackId = EventLoop::defer(static function () use (&$server, &$subscribers) {
+        EventLoop::queue(static function () use (&$server, &$subscribers) {
             while ($socket = $server->accept()) {
                 $data = $socket->read(limit: self::CHUNK_SIZE);
 
@@ -45,10 +44,15 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
                     continue;
                 }
 
-                ['size' => $size, 'data' => $data] = \unpack('Vsize/a*data', $data);
+                ['size' => $size, 'gzip' => $compressed, 'data' => $data] = \unpack('Vsize/vgzip/a*data', $data);
 
-                while (\strlen($data) < $size) {
+                $i = 0;
+                while (\strlen($data) < $size && $i++ < 5000) {
                     $data .= $socket->read(limit: self::CHUNK_SIZE);
+                }
+
+                if ($compressed) {
+                    $data = \gzinflate($data);
                 }
 
                 $message = \unserialize($data);
@@ -62,9 +66,15 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
                     }
                 }
 
+                $serializedMessage = \serialize($return);
+                $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > self::COMPRESS_FROM;
+
+                if ($compressMessage) {
+                    $serializedMessage = \gzdeflate($serializedMessage, 1);
+                }
+
                 try {
-                    $serializedWriteData = \serialize($return);
-                    $socket->write(\pack('Va*', \strlen($serializedWriteData), $serializedWriteData));
+                    $socket->write(\pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage));
                 } catch (StreamException) {
                     // if socket is not writable anymore
                     continue;
@@ -83,7 +93,6 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
 
     public function __destruct()
     {
-        EventLoop::cancel($this->callbackId);
         $this->socket->close();
     }
 

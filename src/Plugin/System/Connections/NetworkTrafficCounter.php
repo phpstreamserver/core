@@ -18,16 +18,22 @@ use Revolt\EventLoop;
 
 final class NetworkTrafficCounter
 {
-    private const FLUSH_PERIOD = 0.5;
+    private const FLUSH_PERIOD = 0.3;
 
     /**
      * @var list<MessageInterface>
      */
-    private array $queue = [];
-    private string $callbackId = '';
+    private array $events = [];
 
-    public function __construct(private readonly MessageBusInterface $messageBus)
+    public function __construct(MessageBusInterface $messageBus)
     {
+        EventLoop::repeat(self::FLUSH_PERIOD, function () use ($messageBus) {
+            $events = $this->events;
+            if ($events !== []) {
+                $this->events = [];
+                $messageBus->dispatch(new CompositeMessage($events));
+            }
+        });
     }
 
     public function addConnection(Socket $socket): void
@@ -37,7 +43,7 @@ final class NetworkTrafficCounter
         \assert($localAddress instanceof InternetAddress);
         \assert($remoteAddress instanceof InternetAddress);
 
-        $this->queue(new ConnectionCreatedEvent(
+        $this->events[] = new ConnectionCreatedEvent(
             pid: \posix_getpid(),
             connectionId: \spl_object_id($socket),
             connection: new Connection(
@@ -48,15 +54,15 @@ final class NetworkTrafficCounter
                 remoteIp: $remoteAddress->getAddress(),
                 remotePort: (string) $remoteAddress->getPort(),
             ),
-        ));
+        );
     }
 
     public function removeConnection(Socket $socket): void
     {
-        $this->queue(new ConnectionClosedEvent(
+        $this->events[] = new ConnectionClosedEvent(
             pid: \posix_getpid(),
             connectionId: \spl_object_id($socket),
-        ));
+        );
     }
 
     /**
@@ -64,11 +70,11 @@ final class NetworkTrafficCounter
      */
     public function incRx(Socket $socket, int $val): void
     {
-        $this->queue(new RxCounterIncreaseEvent(
+        $this->events[] = new RxCounterIncreaseEvent(
             pid: \posix_getpid(),
             connectionId: \spl_object_id($socket),
             rx: $val,
-        ));
+        );
     }
 
     /**
@@ -76,11 +82,11 @@ final class NetworkTrafficCounter
      */
     public function incTx(Socket $socket, int $val): void
     {
-        $this->queue(new TxCounterIncreaseEvent(
+        $this->events[] = new TxCounterIncreaseEvent(
             pid: \posix_getpid(),
             connectionId: \spl_object_id($socket),
             tx: $val,
-        ));
+        );
     }
 
     /**
@@ -88,29 +94,9 @@ final class NetworkTrafficCounter
      */
     public function incRequests(int $val = 1): void
     {
-        $this->queue(new RequestCounterIncreaseEvent(
+        $this->events[] = new RequestCounterIncreaseEvent(
             pid: \posix_getpid(),
             requests: $val,
-        ));
-    }
-
-    private function queue(MessageInterface $message): void
-    {
-        $this->queue[] = $message;
-
-        if ($this->callbackId === '') {
-            $this->callbackId = EventLoop::delay(self::FLUSH_PERIOD, fn() => $this->flush());
-        }
-    }
-
-    private function flush(): void
-    {
-        if ($this->callbackId !== '') {
-            EventLoop::cancel($this->callbackId);
-        }
-        $queue = $this->queue;
-        $this->queue = [];
-        $this->callbackId = '';
-        $this->messageBus->dispatch(new CompositeMessage($queue));
+        );
     }
 }
