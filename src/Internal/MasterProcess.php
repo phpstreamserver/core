@@ -195,6 +195,7 @@ final class MasterProcess
         EventLoop::repeat(self::GC_PERIOD, static function (): void {
             \gc_collect_cycles();
             \gc_mem_caches();
+            \clearstatcache();
         });
 
         foreach ($this->plugins as $plugin) {
@@ -335,5 +336,6 @@ final class MasterProcess
 
         \gc_collect_cycles();
         \gc_mem_caches();
+        \clearstatcache();
     }
 }

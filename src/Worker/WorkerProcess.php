@@ -138,6 +138,7 @@ class WorkerProcess implements Process
         EventLoop::repeat(self::GC_PERIOD, static function (): void {
             \gc_collect_cycles();
             \gc_mem_caches();
+            \clearstatcache();
         });
 
         $this->reloadStrategyStack = new ReloadStrategyStack($this->reload(...), $this->reloadStrategies);
