@@ -13,8 +13,6 @@ use PHPStreamServer\Core\Message\RxCounterIncreaseEvent;
 use PHPStreamServer\Core\Message\TxCounterIncreaseEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 
-use function Amp\weakClosure;
-
 final class ConnectionsStatus
 {
     /**
@@ -28,43 +26,45 @@ final class ConnectionsStatus
 
     public function subscribeToWorkerMessages(MessageHandlerInterface $handler): void
     {
-        $handler->subscribe(ProcessSpawnedEvent::class, weakClosure(function (ProcessSpawnedEvent $message): void {
-            $this->processConnections[$message->pid] = new ProcessConnectionsInfo(
+        $processConnections = &$this->processConnections;
+
+        $handler->subscribe(ProcessSpawnedEvent::class, static function (ProcessSpawnedEvent $message) use (&$processConnections): void {
+            $processConnections[$message->pid] = new ProcessConnectionsInfo(
                 pid: $message->pid,
             );
-        }));
+        });
 
-        $handler->subscribe(ProcessDetachedEvent::class, weakClosure(function (ProcessDetachedEvent $message): void {
-            unset($this->processConnections[$message->pid]);
-        }));
+        $handler->subscribe(ProcessDetachedEvent::class, static function (ProcessDetachedEvent $message) use (&$processConnections): void {
+            unset($processConnections[$message->pid]);
+        });
 
-        $handler->subscribe(RxCounterIncreaseEvent::class, weakClosure(function (RxCounterIncreaseEvent $message): void {
-            $processConnection = $this->processConnections[$message->pid];
+        $handler->subscribe(RxCounterIncreaseEvent::class, static function (RxCounterIncreaseEvent $message) use (&$processConnections): void {
+            $processConnection = $processConnections[$message->pid];
             if (isset($processConnection->connections[$message->connectionId])) {
                 $processConnection->connections[$message->connectionId]->rx += $message->rx;
             }
             $processConnection->rx += $message->rx;
-        }));
+        });
 
-        $handler->subscribe(TxCounterIncreaseEvent::class, weakClosure(function (TxCounterIncreaseEvent $message): void {
-            $processConnection = $this->processConnections[$message->pid];
+        $handler->subscribe(TxCounterIncreaseEvent::class, static function (TxCounterIncreaseEvent $message) use (&$processConnections): void {
+            $processConnection = $processConnections[$message->pid];
             if (isset($processConnection->connections[$message->connectionId])) {
                 $processConnection->connections[$message->connectionId]->tx += $message->tx;
             }
             $processConnection->tx += $message->tx;
-        }));
+        });
 
-        $handler->subscribe(RequestCounterIncreaseEvent::class, weakClosure(function (RequestCounterIncreaseEvent $message): void {
-            $this->processConnections[$message->pid]->requests += $message->requests;
-        }));
+        $handler->subscribe(RequestCounterIncreaseEvent::class, static function (RequestCounterIncreaseEvent $message) use (&$processConnections): void {
+            $processConnections[$message->pid]->requests += $message->requests;
+        });
 
-        $handler->subscribe(ConnectionCreatedEvent::class, weakClosure(function (ConnectionCreatedEvent $message): void {
-            $this->processConnections[$message->pid]->connections[$message->connectionId] = $message->connection;
-        }));
+        $handler->subscribe(ConnectionCreatedEvent::class, static function (ConnectionCreatedEvent $message) use (&$processConnections): void {
+            $processConnections[$message->pid]->connections[$message->connectionId] = $message->connection;
+        });
 
-        $handler->subscribe(ConnectionClosedEvent::class, weakClosure(function (ConnectionClosedEvent $message): void {
-            unset($this->processConnections[$message->pid]->connections[$message->connectionId]);
-        }));
+        $handler->subscribe(ConnectionClosedEvent::class, static function (ConnectionClosedEvent $message) use (&$processConnections): void {
+            unset($processConnections[$message->pid]->connections[$message->connectionId]);
+        });
     }
 
     /**

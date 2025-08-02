@@ -118,17 +118,24 @@ class WorkerProcess implements Process
         /** @var GracefulMessageBusInterface */
         $this->bus = $workerContainer->getService(MessageBusInterface::class);
 
-        ErrorHandler::register($this->logger);
-        EventLoop::setErrorHandler(function (\Throwable $exception) {
-            ErrorHandler::handleException($exception);
-            $this->reloadStrategyStack->emitEvent($exception);
-        });
-
         try {
             $this->setUserAndGroup($this->user, $this->group);
         } catch (UserChangeException $e) {
             $this->logger->warning($e->getMessage(), [(new \ReflectionObject($this))->getShortName() => $this->name]);
         }
+
+        $reloadStrategyStack = new ReloadStrategyStack($this->reload(...), $this->reloadStrategies);
+        $this->reloadStrategyStack = $reloadStrategyStack;
+        unset($this->reloadStrategies);
+
+        $this->startingFuture = new DeferredFuture();
+        $this->container->setService('reload_strategy_emitter', $this->reloadStrategyStack->emitEvent(...));
+
+        ErrorHandler::register($this->logger);
+        EventLoop::setErrorHandler(static function (\Throwable $exception) use ($reloadStrategyStack): void {
+            ErrorHandler::handleException($exception);
+            $reloadStrategyStack->emitEvent($exception);
+        });
 
         EventLoop::onSignal(SIGINT, static fn() => null);
         EventLoop::onSignal(SIGTERM, fn() => $this->stop());
@@ -141,22 +148,11 @@ class WorkerProcess implements Process
             \clearstatcache();
         });
 
-        $this->reloadStrategyStack = new ReloadStrategyStack($this->reload(...), $this->reloadStrategies);
-        $this->container->setService('reload_strategy_emitter', $this->reloadStrategyStack->emitEvent(...));
-        unset($this->reloadStrategies);
-
-        $heartbeatEvent = function (): ProcessHeartbeatEvent {
-            return new ProcessHeartbeatEvent(
-                pid: $this->pid,
-                memory: \memory_get_usage(),
-                time: \hrtime(true),
-            );
-        };
-
-        $this->startingFuture = new DeferredFuture();
-
-        EventLoop::repeat(self::HEARTBEAT_PERIOD, function () use ($heartbeatEvent) {
-            $this->bus->dispatch($heartbeatEvent());
+        $bus = $this->bus;
+        $pid = $this->pid;
+        $heartbeatEvent = static fn(): ProcessHeartbeatEvent => new ProcessHeartbeatEvent($pid, \memory_get_usage(), \hrtime(true));
+        EventLoop::repeat(self::HEARTBEAT_PERIOD, static function () use ($bus, $heartbeatEvent): void {
+            $bus->dispatch($heartbeatEvent());
         });
 
         EventLoop::queue(function () use ($heartbeatEvent): void {

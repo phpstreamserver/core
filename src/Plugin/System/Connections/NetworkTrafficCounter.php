@@ -18,7 +18,7 @@ use Revolt\EventLoop;
 
 final class NetworkTrafficCounter
 {
-    private const FLUSH_PERIOD = 0.3;
+    private const FLUSH_PERIOD = 0.5;
 
     /**
      * @var list<MessageInterface>
@@ -27,11 +27,12 @@ final class NetworkTrafficCounter
 
     public function __construct(MessageBusInterface $messageBus)
     {
-        EventLoop::repeat(self::FLUSH_PERIOD, function () use ($messageBus) {
-            $events = $this->events;
+        $events = &$this->events;
+
+        EventLoop::repeat(self::FLUSH_PERIOD, static function () use (&$events, $messageBus) {
             if ($events !== []) {
-                $this->events = [];
                 $messageBus->dispatch(new CompositeMessage($events));
+                $events = [];
             }
         });
     }

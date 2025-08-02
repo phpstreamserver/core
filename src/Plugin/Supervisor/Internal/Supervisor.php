@@ -20,8 +20,6 @@ use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
 
-use function Amp\weakClosure;
-
 /**
  * @internal
  */
@@ -54,22 +52,25 @@ final class Supervisor
         $this->messageHandler = &$messageHandler;
         $this->messageBus = &$messageBus;
 
-        SIGCHLDHandler::onChildProcessExit(weakClosure(function (int $pid, int $exitCode) {
-            if (null !== $worker = $this->workerPool->getWorkerByPid($pid)) {
-                $this->onProcessStop($worker, $pid, $exitCode);
+        $workerPool = $this->workerPool;
+        $onProcessStop = $this->onProcessStop(...);
+
+        SIGCHLDHandler::onChildProcessExit(static function (int $pid, int $exitCode) use ($workerPool, $onProcessStop): void {
+            if (null !== $worker = $workerPool->getWorkerByPid($pid)) {
+                $onProcessStop($worker, $pid, $exitCode);
             }
-        }));
+        });
 
         EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $this->monitorWorkerStatus(...));
 
-        EventLoop::defer(function () {
-            $this->messageHandler->subscribe(ProcessDetachedEvent::class, weakClosure(function (ProcessDetachedEvent $message): void {
-                $this->workerPool->markAsDetached($message->pid);
-            }));
+        EventLoop::defer(static function () use ($workerPool, &$messageHandler): void {
+            $messageHandler->subscribe(ProcessDetachedEvent::class, static function (ProcessDetachedEvent $message) use ($workerPool): void {
+                $workerPool->markAsDetached($message->pid);
+            });
 
-            $this->messageHandler->subscribe(ProcessHeartbeatEvent::class, weakClosure(function (ProcessHeartbeatEvent $message): void {
-                $this->workerPool->markAsHealthy($message->pid, $message->time);
-            }));
+            $messageHandler->subscribe(ProcessHeartbeatEvent::class, static function (ProcessHeartbeatEvent $message) use ($workerPool): void {
+                $workerPool->markAsHealthy($message->pid, $message->time);
+            });
         });
 
         $this->spawnProcesses();
@@ -110,8 +111,9 @@ final class Supervisor
             $blockTime = $process->detached ? 0 : (int) \round((\hrtime(true) - $process->time) / 1000000000);
             if ($process->blocked === false && $blockTime > $this->workerPool::BLOCK_WARNING_TRESHOLD) {
                 $this->workerPool->markAsBlocked($process->pid);
-                EventLoop::defer(function () use ($process): void {
-                    $this->messageBus->dispatch(new ProcessBlockedEvent($process->pid));
+                $messageBus = $this->messageBus;
+                EventLoop::defer(static function () use ($messageBus, $process): void {
+                    $messageBus->dispatch(new ProcessBlockedEvent($process->pid));
                 });
                 $this->logger->warning(\sprintf(
                     'Worker %s[pid:%d] blocked event loop for more than %s seconds',
@@ -131,9 +133,10 @@ final class Supervisor
     private function onProcessStop(WorkerProcess $process, int $pid, int $exitCode): void
     {
         $this->workerPool->markAsDeleted($pid);
+        $messageBus = $this->messageBus;
 
-        EventLoop::defer(function () use ($pid, $exitCode): void {
-            $this->messageBus->dispatch(new ProcessExitEvent($pid, $exitCode));
+        EventLoop::defer(static function () use ($messageBus, $pid, $exitCode): void {
+            $messageBus->dispatch(new ProcessExitEvent($pid, $exitCode));
         });
 
         if ($this->status === Status::RUNNING) {
@@ -168,13 +171,17 @@ final class Supervisor
         if ($this->workerPool->getWorkerCount() === 0) {
             $this->stopFuture->complete();
         } else {
-            $stopCallbackId = EventLoop::delay($this->stopTimeout, function (): void {
+            $stopTimeout = $this->stopTimeout;
+            $workerPool = $this->workerPool;
+            $logger = $this->logger;
+            $stopFuture = $this->stopFuture;
+            $stopCallbackId = EventLoop::delay($stopTimeout, static function () use ($stopTimeout, $workerPool, $logger, $stopFuture): void {
                 // Send SIGKILL signal to all child processes ater timeout
-                foreach ($this->workerPool->getProcesses() as $worker => $process) {
+                foreach ($workerPool->getProcesses() as $worker => $process) {
                     \posix_kill($process->pid, SIGKILL);
-                    $this->logger->notice(\sprintf('Worker %s[pid:%s] killed after %ss timeout', $worker->name, $process->pid, $this->stopTimeout));
+                    $logger->notice(\sprintf('Worker %s[pid:%s] killed after %ss timeout', $worker->name, $process->pid, $stopTimeout));
                 }
-                $this->stopFuture->complete();
+                $stopFuture->complete();
             });
 
             $this->stopFuture->getFuture()->finally(static function () use ($stopCallbackId) {

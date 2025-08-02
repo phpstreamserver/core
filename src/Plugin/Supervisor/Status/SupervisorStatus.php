@@ -13,7 +13,6 @@ use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Worker\WorkerProcess;
 use Revolt\EventLoop;
 
-use function Amp\weakClosure;
 use function PHPStreamServer\Core\getMemoryUsageByPid;
 
 final class SupervisorStatus
@@ -34,8 +33,10 @@ final class SupervisorStatus
 
     public function subscribeToWorkerMessages(MessageHandlerInterface $handler): void
     {
-        $handler->subscribe(ProcessSpawnedEvent::class, weakClosure(function (ProcessSpawnedEvent $message): void {
-            $this->processes[$message->pid] = new ProcessInfo(
+        $processes = &$this->processes;
+
+        $handler->subscribe(ProcessSpawnedEvent::class, static function (ProcessSpawnedEvent $message) use (&$processes): void {
+            $processes[$message->pid] = new ProcessInfo(
                 workerId: $message->workerId,
                 pid: $message->pid,
                 user: $message->user,
@@ -43,46 +44,48 @@ final class SupervisorStatus
                 startedAt: $message->startedAt,
                 reloadable: $message->reloadable,
             );
-        }));
+        });
 
-        $handler->subscribe(ProcessHeartbeatEvent::class, weakClosure(function (ProcessHeartbeatEvent $message): void {
-            if (!isset($this->processes[$message->pid]) || $this->processes[$message->pid]->detached === true) {
+        $handler->subscribe(ProcessHeartbeatEvent::class, static function (ProcessHeartbeatEvent $message) use (&$processes): void {
+            if (!isset($processes[$message->pid]) || $processes[$message->pid]->detached === true) {
                 return;
             }
 
-            $this->processes[$message->pid]->memory = $message->memory;
-            $this->processes[$message->pid]->blocked = false;
-        }));
+            $processes[$message->pid]->memory = $message->memory;
+            $processes[$message->pid]->blocked = false;
+        });
 
-        $handler->subscribe(ProcessBlockedEvent::class, weakClosure(function (ProcessBlockedEvent $message): void {
-            if (!isset($this->processes[$message->pid]) || $this->processes[$message->pid]->detached === true) {
+        $handler->subscribe(ProcessBlockedEvent::class, static function (ProcessBlockedEvent $message) use (&$processes): void {
+            if (!isset($processes[$message->pid]) || $processes[$message->pid]->detached === true) {
                 return;
             }
 
-            $this->processes[$message->pid]->blocked = true;
-        }));
+            $processes[$message->pid]->blocked = true;
+        });
 
-        $handler->subscribe(ProcessExitEvent::class, weakClosure(function (ProcessExitEvent $message): void {
-            unset($this->processes[$message->pid]);
-        }));
+        $handler->subscribe(ProcessExitEvent::class, static function (ProcessExitEvent $message) use (&$processes): void {
+            unset($processes[$message->pid]);
+        });
 
-        $handler->subscribe(ProcessDetachedEvent::class, weakClosure(function (ProcessDetachedEvent $message): void {
-            if (!isset($this->processes[$message->pid])) {
+        $handler->subscribe(ProcessDetachedEvent::class, static function (ProcessDetachedEvent $message) use (&$processes): void {
+            if (!isset($processes[$message->pid])) {
                 return;
             }
 
-            $this->processes[$message->pid]->detached = true;
-            $this->processes[$message->pid]->blocked = false;
+            $processes[$message->pid]->detached = true;
+            $processes[$message->pid]->blocked = false;
 
-            $checkMemoryUsageClosure = function (string $id) use ($message): void {
-                isset($this->processes[$message->pid])
-                    ? $this->processes[$message->pid]->memory = getMemoryUsageByPid($message->pid)
-                    : EventLoop::cancel($id);
+            $checkMemoryUsageClosure = static function (string $id) use (&$processes, $message): void {
+                if (isset($processes[$message->pid])) {
+                    $processes[$message->pid]->memory = getMemoryUsageByPid($message->pid);
+                } else {
+                    EventLoop::cancel($id);
+                }
             };
 
             EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $checkMemoryUsageClosure);
             EventLoop::delay(0.2, $checkMemoryUsageClosure);
-        }));
+        });
     }
 
     public function addWorker(WorkerProcess $worker): void

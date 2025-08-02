@@ -18,11 +18,19 @@ final class ReloadStrategyStack
 
     private bool $reloadState = false;
 
+    private readonly \Closure $reloadCallback;
+
     /**
      * @param array<ReloadStrategy> $reloadStrategies
      */
-    public function __construct(private readonly \Closure $reloadCallback, array $reloadStrategies = [])
+    public function __construct(\Closure $reloadCallback, array $reloadStrategies = [])
     {
+        $this->reloadCallback = static function () use ($reloadCallback): void {
+            EventLoop::defer(static function () use ($reloadCallback): void {
+                $reloadCallback();
+            });
+        };
+
         $this->addReloadStrategy(...$reloadStrategies);
     }
 
@@ -30,9 +38,10 @@ final class ReloadStrategyStack
     {
         foreach ($reloadStrategies as $reloadStrategy) {
             if ($reloadStrategy instanceof TimerReloadStrategy) {
-                EventLoop::repeat($reloadStrategy->getInterval(), function () use ($reloadStrategy): void {
+                $reloadCallback = $this->reloadCallback;
+                EventLoop::repeat($reloadStrategy->getInterval(), static function () use ($reloadStrategy, $reloadCallback): void {
                     if ($reloadStrategy->shouldReload()) {
-                        $this->reload();
+                        $reloadCallback();
                     }
                 });
             } else {
@@ -53,16 +62,9 @@ final class ReloadStrategyStack
         foreach ($this->reloadStrategies as $reloadStrategy) {
             if ($reloadStrategy->shouldReload($event)) {
                 $this->reloadState = true;
-                $this->reload();
+                ($this->reloadCallback)();
                 break;
             }
         }
-    }
-
-    private function reload(): void
-    {
-        EventLoop::defer(function (): void {
-            ($this->reloadCallback)();
-        });
     }
 }

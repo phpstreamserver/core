@@ -74,9 +74,11 @@ class ExternalProcess extends WorkerProcess
     private function exec(string $path, array $args): never
     {
         $envVars = [...\getenv(), ...$_ENV];
+        $logger = $this->logger;
+        $command = $this->command;
 
-        \set_error_handler(function (int $code): true {
-            $this->logger->critical('External process call error: ' . \posix_strerror($code), ['comand' => $this->command]);
+        \set_error_handler(static function (int $code) use ($logger, $command): true {
+            $logger->critical('External process call error: ' . \posix_strerror($code), ['comand' => $command]);
             return true;
         });
 

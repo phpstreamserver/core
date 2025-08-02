@@ -33,10 +33,12 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
     public function dispatch(MessageInterface $message): Future
     {
         $this->queue++;
-        return async(function () use ($message): mixed {
+        $connector = $this->connector;
+        $queue = &$this->queue;
+        return async(static function () use ($message, $connector): mixed {
             while (true) {
                 try {
-                    $socket = $this->connector->connect('');
+                    $socket = $connector->connect('');
                     break;
                 } catch (ConnectException) {
                     delay(0.01);
@@ -67,15 +69,17 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
             }
 
             return \unserialize($data);
-        })->finally(function (): void {
-            $this->queue--;
+        })->finally(static function () use (&$queue): void {
+            $queue--;
         });
     }
 
     public function stop(): Future
     {
-        return async(function (): void {
-            while ($this->queue > 0) {
+        $queue = &$this->queue;
+
+        return async(static function () use (&$queue): void {
+            while ($queue > 0) {
                 delay(0.001);
             }
         });

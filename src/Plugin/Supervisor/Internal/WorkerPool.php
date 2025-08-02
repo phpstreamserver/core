@@ -62,10 +62,11 @@ final class WorkerPool
     public function markAsBlocked(int $pid): void
     {
         if (null !== $worker = $this->getWorkerByPid($pid)) {
-            $this->processStatusMap[$worker->id][$pid]->blocked = true;
-            EventLoop::delay(self::BLOCKED_LABEL_PERSISTENCE, function () use ($worker, $pid) {
-                if (isset($this->processStatusMap[$worker->id][$pid])) {
-                    $this->processStatusMap[$worker->id][$pid]->blocked = false;
+            $processStatusMap = &$this->processStatusMap;
+            $processStatusMap[$worker->id][$pid]->blocked = true;
+            EventLoop::delay(self::BLOCKED_LABEL_PERSISTENCE, static function () use (&$processStatusMap, $worker, $pid) {
+                if (isset($processStatusMap[$worker->id][$pid])) {
+                    $processStatusMap[$worker->id][$pid]->blocked = false;
                 }
             });
         }
