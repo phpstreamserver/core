@@ -10,57 +10,7 @@
 ![Version](https://img.shields.io/github/v/tag/phpstreamserver/core?label=Version&filter=v*.*.*&sort=semver&color=374151)
 ![Downloads](https://img.shields.io/packagist/dt/phpstreamserver/core?label=Downloads&color=f28d1a)
 
-**PHPStreamServer** is a high performance, event-loop based application server and process supervisor for PHP written in PHP.
-As the core component of PHPStreamServer, this module is responsible for comprehensive worker management.
+The core component is required to run PHPStreamServer. It provides the essential server functionality along with a supervisor to manage worker processes.
 
-### Features
-- Worker lifecycle management: Handles the creation, monitoring, and termination of worker processes.
-- Automatic restarts: Automatically restarts workers in case of an exception or upon reaching specified limits.
-- Time-to-live limits: Sets execution time limits for worker processes.
-- Memory usage limits: Set memory usage limits to prevent memory leaks.
-- Support for external programs: Use all of these to enable the supervision of external programs and processes.
-- Resource sharing across workers: Preload any resources in a master process, and it will be shared among all workers reducing memory usage.
-
-### Requirements and limitations
- - Unix based OS (no windows support);
- - php-posix and php-pcntl extensions;
-
-### Install
-```bash
-$ composer require phpstreamserver/core
-```
-
-### Configure
-Here is an example of a simple supervisor server configuration.
-
-```php
-// server.php
-
-use PHPStreamServer\Core\Server;
-use PHPStreamServer\Core\Worker\ExternalProcess;
-use PHPStreamServer\Core\Worker\WorkerProcess;
-
-$server = new Server();
-
-$server->addWorker(
-    new WorkerProcess(
-        name: 'Supervised Program',
-        count: 1,
-        onStart: function (WorkerProcess $worker): void {
-            // custom long running process
-        },
-    ),
-    new ExternalProcess(
-        name: 'External supervised program',
-        count: 1,
-        command: 'sleep 600'
-    ),
-);
-
-exit($server->run());
-```
-
-### Run
-```bash
-$ php server.php start
-```
+### Resources
+- [Documentation](https://phpstreamserver.dev/docs/general/configuration)
