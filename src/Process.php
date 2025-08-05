@@ -10,6 +10,9 @@ use PHPStreamServer\Core\Plugin\Plugin;
 
 interface Process
 {
+    /**
+     * @internal
+     */
     public function run(ContainerInterface $workerContainer): int;
 
     /**
@@ -27,7 +30,7 @@ interface Process
 
     public function getContainer(): ContainerInterface;
 
-    public function getLogger(): LoggerInterface;
-
     public function getMessageBus(): MessageBusInterface;
+
+    public function getLogger(): LoggerInterface;
 }

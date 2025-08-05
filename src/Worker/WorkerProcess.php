@@ -91,9 +91,11 @@ class WorkerProcess implements Process
         if ($onStart !== null) {
             $this->onStart($onStart);
         }
+
         if ($onStop !== null) {
             $this->onStop($onStop);
         }
+
         if ($onReload !== null) {
             $this->onReload($onReload);
         }
