@@ -73,8 +73,10 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
                     $serializedMessage = \gzdeflate($serializedMessage, 1);
                 }
 
+                $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
+
                 try {
-                    $socket->write(\pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage));
+                    $socket->write($payload);
                 } catch (StreamException) {
                     // if socket is not writable anymore
                     continue;

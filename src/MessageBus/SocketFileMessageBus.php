@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\MessageBus;
 
+use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Socket\ConnectException;
 use Amp\Socket\DnsSocketConnector;
 use Amp\Socket\SocketConnector;
 use Amp\Socket\StaticSocketConnector;
 use Amp\Socket\UnixAddress;
+use Revolt\EventLoop;
 
 use function Amp\async;
 use function Amp\delay;
@@ -35,6 +37,7 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
         $this->queue++;
         $connector = $this->connector;
         $queue = &$this->queue;
+
         return async(static function () use ($message, $connector): mixed {
             while (true) {
                 try {
@@ -52,8 +55,9 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
                 $serializedMessage = \gzdeflate($serializedMessage, 1);
             }
 
-            $socket->write(\pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage));
+            $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
 
+            $socket->write($payload);
             $data = $socket->read(limit: SocketFileMessageHandler::CHUNK_SIZE);
             \assert(\is_string($data));
 
@@ -77,8 +81,11 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
     public function stop(): Future
     {
         $queue = &$this->queue;
+        $deferred = new DeferredFuture();
+        EventLoop::defer($deferred->complete(...));
 
-        return async(static function () use (&$queue): void {
+        return async(static function () use (&$queue, $deferred): void {
+            $deferred->getFuture()->await();
             while ($queue > 0) {
                 delay(0.001);
             }
