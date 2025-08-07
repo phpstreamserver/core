@@ -108,7 +108,7 @@ final class Supervisor
     private function monitorWorkerStatus(): void
     {
         foreach ($this->workerPool->getProcesses() as $worker => $process) {
-            $blockTime = $process->detached ? 0 : (int) \round((\hrtime(true) - $process->time) / 1000000000);
+            $blockTime = $process->detached ? 0 : (int) \round((\hrtime(true) - $process->time) * 1e-9);
             if ($process->blocked === false && $blockTime > $this->workerPool::BLOCK_WARNING_TRESHOLD) {
                 $this->workerPool->markAsBlocked($process->pid);
                 $messageBus = $this->messageBus;
