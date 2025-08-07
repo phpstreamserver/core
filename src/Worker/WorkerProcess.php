@@ -106,7 +106,7 @@ class WorkerProcess implements Process
      */
     final public function run(ContainerInterface $workerContainer): int
     {
-        // some command line SAPIs (e.g. phpdbg) don't have that function
+        // some command line SAPIs (e.g., phpdbg) don't have that function
         if (\function_exists('cli_set_process_title')) {
             \cli_set_process_title(\sprintf('%s: worker process  %s', Server::NAME, $this->name));
         }

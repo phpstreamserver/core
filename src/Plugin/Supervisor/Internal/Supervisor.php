@@ -141,11 +141,11 @@ final class Supervisor
 
         if ($this->status === Status::RUNNING) {
             if ($exitCode === 0) {
-                $this->logger->info(\sprintf('Worker %s[pid:%d] exit with code %s', $process->name, $pid, $exitCode));
+                $this->logger->info(\sprintf('Worker %s[pid:%d] exited with code %s', $process->name, $pid, $exitCode));
             } elseif ($exitCode === $process::RELOAD_EXIT_CODE && $process->reloadable) {
                 $this->logger->info(\sprintf('Worker %s[pid:%d] reloaded', $process->name, $pid));
             } else {
-                $this->logger->warning(\sprintf('Worker %s[pid:%d] exit with code %s', $process->name, $pid, $exitCode));
+                $this->logger->warning(\sprintf('Worker %s[pid:%d] exited with code %s', $process->name, $pid, $exitCode));
             }
 
             // Restart worker
@@ -176,7 +176,7 @@ final class Supervisor
             $logger = $this->logger;
             $stopFuture = $this->stopFuture;
             $stopCallbackId = EventLoop::delay($stopTimeout, static function () use ($stopTimeout, $workerPool, $logger, $stopFuture): void {
-                // Send SIGKILL signal to all child processes ater timeout
+                // Send a SIGKILL signal to all child processes after timeout
                 foreach ($workerPool->getProcesses() as $worker => $process) {
                     \posix_kill($process->pid, SIGKILL);
                     $logger->notice(\sprintf('Worker %s[pid:%s] killed after %ss timeout', $worker->name, $process->pid, $stopTimeout));

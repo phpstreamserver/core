@@ -28,7 +28,7 @@ class ExternalProcess extends WorkerProcess
         $this->bus->dispatch(new ProcessDetachedEvent($this->pid))->await();
 
         if ($this->command === '') {
-            $this->logger->critical('External process call error: command can not be empty', ['comand' => $this->command]);
+            $this->logger->critical('External process call error: command cannot be empty', ['comand' => $this->command]);
             $this->stop(1);
             return;
         }
@@ -36,7 +36,7 @@ class ExternalProcess extends WorkerProcess
         // Check if command contains logic operators such as && and ||
         if (\preg_match('/(\'[^\']*\'|"[^"]*")(*SKIP)(*FAIL)|&&|\|\|/', $this->command) === 1) {
             $this->logger->critical(\sprintf(
-                'External process call error: logical operators not supported, use shell with -c option e.g. "/bin/sh -c "%s"',
+                'External process call error: logical operators are not supported. Use a shell with the -c option e.g., "/bin/sh -c "%s""',
                 $this->command,
             ), ['comand' => $this->command]);
 
@@ -67,7 +67,7 @@ class ExternalProcess extends WorkerProcess
     /**
      * Give control to an external program
      *
-     * @param string $path path to a binary executable or a script
+     * @param string $path path to a binary executable or script
      * @param array $args array of argument strings passed to the program
      * @see https://www.php.net/manual/en/function.pcntl-exec.php
      */

@@ -23,7 +23,7 @@ class StopCommand extends Command
         $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
         echo Server::NAME . " stopping ...\n";
         $bus->dispatch(new StopServerCommand())->await();
-        echo Server::NAME . " stopped\n";
+        echo Server::NAME . " has stopped\n";
 
         return 0;
     }

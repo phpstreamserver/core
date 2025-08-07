@@ -39,7 +39,7 @@ final class WorkerPool
     public function addChild(WorkerProcess $process, int $pid): void
     {
         if (!isset($this->workerPool[$process->id])) {
-            throw new PHPStreamServerException('Worker is not found in pool');
+            throw new PHPStreamServerException('Worker not found in the pool');
         }
 
         $this->processStatusMap[$process->id][$pid] = new ProcessStatus($pid, $process->reloadable);

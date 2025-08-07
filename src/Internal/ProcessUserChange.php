@@ -23,7 +23,7 @@ trait ProcessUserChange
         }
 
         if (\posix_getuid() !== 0) {
-            throw new UserChangeException('You must have the root privileges to change the user and group');
+            throw new UserChangeException('You must have root privileges to change the user and group');
         }
 
         $user ??= getCurrentUser();

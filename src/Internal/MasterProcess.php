@@ -64,11 +64,11 @@ final class MasterProcess
         array $workers,
     ) {
         if (!\in_array(PHP_SAPI, ['cli', 'phpdbg', 'micro'], true)) {
-            throw new PHPStreamServerException('Works in command line mode only');
+            throw new PHPStreamServerException('Can only run in CLI mode');
         }
 
         if (self::$registered) {
-            throw new PHPStreamServerException('Only one instance of server can be instantiated');
+            throw new PHPStreamServerException('The server can only be instantiated once');
         }
 
         self::$registered = true;
@@ -101,12 +101,12 @@ final class MasterProcess
     public function addPlugin(Plugin ...$plugins): void
     {
         if ($this->status !== Status::SHUTDOWN) {
-            throw new PHPStreamServerException('Cannot add plugin on running server');
+            throw new PHPStreamServerException('Cannot add a plugin to a running server');
         }
 
         foreach ($plugins as $plugin) {
             if (isset($this->plugins[$plugin::class])) {
-                throw new PHPStreamServerException(\sprintf('Plugin "%s" already registered', $plugin::class));
+                throw new PHPStreamServerException(\sprintf('Plugin "%s" is already registered', $plugin::class));
             }
             $this->plugins[$plugin::class] = $plugin;
             $plugin->register($this->masterContainer, $this->workerContainer, $this->status);
@@ -116,7 +116,7 @@ final class MasterProcess
     public function addWorker(Process ...$workers): void
     {
         if ($this->status !== Status::SHUTDOWN) {
-            throw new PHPStreamServerException('Cannot add worker on running server');
+            throw new PHPStreamServerException('Cannot add a worker to a running server');
         }
 
         foreach ($workers as $worker) {
@@ -136,7 +136,7 @@ final class MasterProcess
     public function run(bool $daemonize): int
     {
         if ($this->isRunning()) {
-            throw new PHPStreamServerException(\sprintf('%s already running', Server::NAME));
+            throw new PHPStreamServerException(\sprintf('%s is already running', Server::NAME));
         }
 
         if ($daemonize && $this->doDaemonize()) {
@@ -169,7 +169,7 @@ final class MasterProcess
     {
         $startFile = getStartFile();
 
-        // some command line SAPIs (e.g. phpdbg) don't have that function
+        // some command line SAPIs (e.g., phpdbg) don't have that function
         if (\function_exists('cli_set_process_title')) {
             \cli_set_process_title(\sprintf('%s: master process  start_file=%s', Server::NAME, $startFile));
         }
@@ -219,7 +219,7 @@ final class MasterProcess
             $this->logger->info(Server::NAME . ' has started');
 
             foreach ($this->workerClassesCanNotBeHandled as $workerClass => $handledByClass) {
-                $this->logger->error(\sprintf('"%s" process can not be handled. Register "%s" plugin', $workerClass, $handledByClass));
+                $this->logger->error(\sprintf('"%s" process cannot be handled. Register the "%s" plugin', $workerClass, $handledByClass));
             }
 
             unset($this->workerClassesCanNotBeHandled);
@@ -269,7 +269,7 @@ final class MasterProcess
         }
 
         if (false === \file_put_contents($this->pidFile, (string) \posix_getpid())) {
-            throw new PHPStreamServerException(\sprintf('Can\'t save pid to %s', $this->pidFile));
+            throw new PHPStreamServerException(\sprintf('Cannot save pid to %s', $this->pidFile));
         }
     }
 
@@ -294,7 +294,7 @@ final class MasterProcess
         $this->logger->info(Server::NAME . ' stopping ...');
         await(\array_map(static fn(Plugin $p) => $p->onStop(), $this->plugins));
         $this->status = Status::SHUTDOWN;
-        $this->logger->info(Server::NAME . ' stopped');
+        $this->logger->info(Server::NAME . ' has stopped');
         $this->suspension->resume($code);
     }
 

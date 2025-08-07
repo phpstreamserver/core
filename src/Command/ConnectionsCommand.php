@@ -40,7 +40,7 @@ class ConnectionsCommand extends Command
                     'Remote address',
                     'Bytes (RX / TX)',
                 ])
-                ->addRows(\array_map(array: $connections, callback: static function (Connection $c) {
+                ->addRows(\array_map(array: $connections, callback: static function (Connection $c): array {
                     return [
                         $c->pid,
                         $c->localIp . ':' . $c->localPort,

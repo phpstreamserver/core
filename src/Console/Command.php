@@ -7,28 +7,27 @@ namespace PHPStreamServer\Core\Console;
 abstract class Command
 {
     /**
-     * Describe command name. e.g. "start"
+     * Command name, e.g., "start".
      */
     public const COMMAND = '';
 
     /**
-     * Describe command name. e.g. "Start server"
+     * Command description, e.g., "Start server".
      */
     public const DESCRIPTION = '';
 
     public Options $options;
 
     /**
-     * Configure command.
-     * Could be used to register options for command e.g. $this->options->addOptionDefinition('daemon', 'd', 'Run in daemon mode');
+     * Configure the command.
+     * Can be used to register options, e.g., $this->options->addOptionDefinition('daemon', 'd', 'Run in daemon mode');
      */
     public function configure(): void
     {
     }
 
     /**
-     * Execute command.
-     * MUST return exit code
+     * Execute the command. MUST return an exit code.
      */
     abstract public function execute(array $args): int;
 }
