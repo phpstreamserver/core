@@ -204,7 +204,7 @@ final class MasterProcess
             });
         }
 
-        EventLoop::defer(function () {
+        EventLoop::defer(function (): void {
             ErrorHandler::register($this->logger);
             EventLoop::setErrorHandler(ErrorHandler::handleException(...));
 
@@ -212,7 +212,7 @@ final class MasterProcess
                 $this->stop($message->code);
             });
 
-            $this->messageHandler->subscribe(ReloadServerCommand::class, function () {
+            $this->messageHandler->subscribe(ReloadServerCommand::class, function (): void {
                 $this->reload();
             });
 

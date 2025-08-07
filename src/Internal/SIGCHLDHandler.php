@@ -22,7 +22,7 @@ final class SIGCHLDHandler
     private static function register(): void
     {
         self::$isRegistered = true;
-        self::$signalCallbackId = EventLoop::onSignal(SIGCHLD, static function () {
+        self::$signalCallbackId = EventLoop::onSignal(SIGCHLD, static function (): void {
             while (($pid = \pcntl_wait($status, WNOHANG)) > 0) {
                 $exitCode = \pcntl_wexitstatus($status) ?: 0;
                 foreach (self::$callbacks as $callback) {

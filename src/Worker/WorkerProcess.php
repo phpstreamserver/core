@@ -170,7 +170,7 @@ class WorkerProcess implements Process
                 $heartbeatEvent(),
             ]))->await();
 
-            EventLoop::queue(function () {
+            EventLoop::queue(function (): void {
                 try {
                     foreach ($this->onStartCallbacks as $onStartCallback) {
                         $onStartCallback($this);

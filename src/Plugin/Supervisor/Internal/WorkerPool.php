@@ -64,7 +64,7 @@ final class WorkerPool
         if (null !== $worker = $this->getWorkerByPid($pid)) {
             $processStatusMap = &$this->processStatusMap;
             $processStatusMap[$worker->id][$pid]->blocked = true;
-            EventLoop::delay(self::BLOCKED_LABEL_PERSISTENCE, static function () use (&$processStatusMap, $worker, $pid) {
+            EventLoop::delay(self::BLOCKED_LABEL_PERSISTENCE, static function () use (&$processStatusMap, $worker, $pid): void {
                 if (isset($processStatusMap[$worker->id][$pid])) {
                     $processStatusMap[$worker->id][$pid]->blocked = false;
                 }

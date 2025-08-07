@@ -51,7 +51,7 @@ class ProcessesCommand extends Command
                     'Bytes (RX / TX)',
                     'Status',
                 ])
-                ->addRows(\array_map(array: $processes, callback: static function (ProcessInfo $w) use ($connectionsStatus) {
+                ->addRows(\array_map(array: $processes, callback: static function (ProcessInfo $w) use ($connectionsStatus): array {
                     $c = $connectionsStatus->getProcessConnectionsInfo($w->pid);
 
                     return [

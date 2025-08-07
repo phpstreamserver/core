@@ -84,7 +84,7 @@ class StartCommand extends Command
                     'Worker',
                     'Count',
                 ])
-                ->addRows(\array_map(static function (WorkerInfo $w) {
+                ->addRows(\array_map(static function (WorkerInfo $w): array {
                     return [
                         $w->user,
                         $w->name,
