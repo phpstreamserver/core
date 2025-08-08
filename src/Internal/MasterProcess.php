@@ -120,15 +120,15 @@ final class MasterProcess
         }
 
         foreach ($workers as $worker) {
-            foreach ($worker::handleBy() as $handledByPluginClass) {
+            foreach ($worker::handledBy() as $handledByPluginClass) {
                 if (!isset($this->plugins[$handledByPluginClass])) {
                     $this->workerClassesCanNotBeHandled[$worker::class] = $handledByPluginClass;
                     continue 2;
                 }
             }
 
-            foreach ($worker::handleBy() as $handledByPluginClass) {
-                $this->plugins[$handledByPluginClass]->addWorker($worker);
+            foreach ($worker::handledBy() as $handledByPluginClass) {
+                $this->plugins[$handledByPluginClass]->handleWorker($worker);
             }
         }
     }

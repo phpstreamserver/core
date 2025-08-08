@@ -196,7 +196,7 @@ class WorkerProcess implements Process
     /**
      * @return list<class-string<Plugin>>
      */
-    public static function handleBy(): array
+    public static function handledBy(): array
     {
         return [SupervisorPlugin::class];
     }

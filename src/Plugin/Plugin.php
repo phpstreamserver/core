@@ -32,9 +32,9 @@ abstract class Plugin
     }
 
     /**
-     * Handle worker
+     * Handles a worker to be configured by the plugin
      */
-    public function addWorker(Process $worker): void
+    public function handleWorker(Process $worker): void
     {
     }
 
