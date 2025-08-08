@@ -71,6 +71,7 @@ final class SupervisorPlugin extends Plugin
                 $registry = $this->masterContainer->getService(RegistryInterface::class);
                 $this->masterContainer->setService(MetricsHandler::class, new MetricsHandler($registry, $this->supervisorStatus, $this->handler));
             } catch (ServiceNotFoundException) {
+                // no action
             }
         }
     }

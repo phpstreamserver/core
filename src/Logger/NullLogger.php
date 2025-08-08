@@ -17,6 +17,6 @@ final class NullLogger implements LoggerInterface
 
     public function log($level, \Stringable|string $message, array $context = []): void
     {
-        // noop
+        // no action
     }
 }

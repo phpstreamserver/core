@@ -176,7 +176,7 @@ final class Supervisor
             $logger = $this->logger;
             $stopFuture = $this->stopFuture;
             $stopCallbackId = EventLoop::delay($stopTimeout, static function () use ($stopTimeout, $workerPool, $logger, $stopFuture): void {
-                // Send a SIGKILL signal to all child processes after timeout
+                // Send SIGKILL signal to all child processes after timeout
                 foreach ($workerPool->getProcesses() as $worker => $process) {
                     \posix_kill($process->pid, SIGKILL);
                     $logger->notice(\sprintf('Worker %s[pid:%s] killed after %ss timeout', $worker->name, $process->pid, $stopTimeout));

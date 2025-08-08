@@ -32,35 +32,35 @@ abstract class Plugin
     }
 
     /**
-     * Hanlde worker
+     * Handle worker
      */
     public function addWorker(Process $worker): void
     {
     }
 
     /**
-     * Executes before startup
+     * Called before the server starts
      */
     protected function beforeStart(): void
     {
     }
 
     /**
-     * Executes during startup
+     * Called during server startup
      */
     public function onStart(): void
     {
     }
 
     /**
-     * Executes after startup
+     * Called after the server has started
      */
     public function afterStart(): void
     {
     }
 
     /**
-     * Executes after the master process receives a stop command
+     * Called after the master process receives a stop command
      */
     public function onStop(): Future
     {
@@ -68,14 +68,14 @@ abstract class Plugin
     }
 
     /**
-     * Executes after the master process receives a reload command
+     * Called after the master process receives a reload command
      */
     public function onReload(): void
     {
     }
 
     /**
-     * Register commands
+     * Registers commands provided by the plugin
      *
      * @return iterable<Command>
      */
