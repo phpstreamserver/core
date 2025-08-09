@@ -29,7 +29,7 @@ final class NetworkTrafficCounter
     {
         $events = &$this->events;
 
-        EventLoop::repeat(self::FLUSH_PERIOD, static function () use (&$events, $messageBus) {
+        EventLoop::repeat(self::FLUSH_PERIOD, static function () use (&$events, $messageBus): void {
             if ($events !== []) {
                 $messageBus->dispatch(new CompositeMessage($events));
                 $events = [];

@@ -208,7 +208,7 @@ final class MasterProcess
             ErrorHandler::register($this->logger);
             EventLoop::setErrorHandler(ErrorHandler::handleException(...));
 
-            $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $message) {
+            $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $message): void {
                 $this->stop($message->code);
             });
 
@@ -226,7 +226,7 @@ final class MasterProcess
         });
 
         foreach ($this->plugins as $plugin) {
-            EventLoop::defer(static function () use ($plugin) {
+            EventLoop::defer(static function () use ($plugin): void {
                 $plugin->afterStart();
             });
         }
@@ -307,7 +307,7 @@ final class MasterProcess
         $this->logger->info(Server::NAME . ' reloading ...');
 
         foreach ($this->plugins as $plugin) {
-            EventLoop::queue(static function () use ($plugin) {
+            EventLoop::queue(static function () use ($plugin): void {
                 $plugin->onReload();
             });
         }
