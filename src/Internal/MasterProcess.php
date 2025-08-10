@@ -73,19 +73,21 @@ final class MasterProcess
 
         self::$registered = true;
 
-        $this->masterContainer = new Container();
-        $this->workerContainer = new Container();
-
-        // Init event loop.
+        // Init event loop
         EventLoop::setDriver(new StreamSelectDriver());
         $this->suspension = EventLoop::getDriver()->getSuspension();
 
+        // Init master container
+        $this->masterContainer = new Container();
         $this->masterContainer->setService('main_suspension', $this->suspension);
         $this->masterContainer->registerService(MessageHandlerInterface::class, fn() => new SocketFileMessageHandler($this->socketFile));
         $this->masterContainer->setAlias(MessageBusInterface::class, MessageHandlerInterface::class);
         $this->masterContainer->registerService(LoggerInterface::class, $defaultLogger = static fn() => new ConsoleLogger());
         $this->masterContainer->setParameter('pid_file', $this->pidFile);
         $this->masterContainer->setParameter('socket_file', $this->socketFile);
+
+        // Init worker container
+        $this->workerContainer = new Container();
         $this->workerContainer->registerService(MessageBusInterface::class, fn() => new SocketFileMessageBus($this->socketFile));
         $this->workerContainer->registerService(LoggerInterface::class, static fn() => $defaultLogger()->withChannel('worker'));
         $this->workerContainer->setAlias(PsrLoggerInterface::class, LoggerInterface::class);
@@ -94,16 +96,7 @@ final class MasterProcess
         $this->workerContainer->setService(ContainerInterface::class, $this->workerContainer);
         $this->workerContainer->setAlias(PsrContainerInterface::class, ContainerInterface::class);
 
-        $this->addPlugin(...$plugins);
-        $this->addWorker(...$workers);
-    }
-
-    public function addPlugin(Plugin ...$plugins): void
-    {
-        if ($this->status !== Status::SHUTDOWN) {
-            throw new PHPStreamServerException('Cannot add a plugin to a running server');
-        }
-
+        // Init plugins
         foreach ($plugins as $plugin) {
             if (isset($this->plugins[$plugin::class])) {
                 throw new PHPStreamServerException(\sprintf('Plugin "%s" is already registered', $plugin::class));
@@ -111,14 +104,8 @@ final class MasterProcess
             $this->plugins[$plugin::class] = $plugin;
             $plugin->register($this->masterContainer, $this->workerContainer, $this->status);
         }
-    }
 
-    public function addWorker(Process ...$workers): void
-    {
-        if ($this->status !== Status::SHUTDOWN) {
-            throw new PHPStreamServerException('Cannot add a worker to a running server');
-        }
-
+        // Init workers
         foreach ($workers as $worker) {
             foreach ($worker::handledBy() as $handledByPluginClass) {
                 if (!isset($this->plugins[$handledByPluginClass])) {
@@ -131,11 +118,13 @@ final class MasterProcess
                 $this->plugins[$handledByPluginClass]->handleWorker($worker);
             }
         }
+
+        unset($plugins, $workers);
     }
 
     public function run(bool $daemonize): int
     {
-        if ($this->isRunning()) {
+        if ($this->status === Status::RUNNING || isRunning($this->pidFile)) {
             throw new PHPStreamServerException(\sprintf('%s is already running', Server::NAME));
         }
 
@@ -313,26 +302,20 @@ final class MasterProcess
         }
     }
 
-    public function isRunning(): bool
-    {
-        return $this->status === Status::RUNNING || isRunning($this->pidFile);
-    }
-
     private function free(): void
     {
         $identifiers = EventLoop::getDriver()->getIdentifiers();
         \array_walk($identifiers, EventLoop::getDriver()->cancel(...));
         EventLoop::getDriver()->stop();
-
         ErrorHandler::unregister();
         SIGCHLDHandler::unregister();
-
         EventLoop::getDriver()->run();
 
-        unset($this->plugins);
         unset($this->messageHandler);
-        unset($this->masterContainer);
         unset($this->logger);
+        unset($this->masterContainer);
+        unset($this->plugins);
+        unset($this->suspension);
 
         \gc_collect_cycles();
         \gc_mem_caches();

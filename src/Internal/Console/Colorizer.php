@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Console;
+namespace PHPStreamServer\Core\Internal\Console;
 
+/**
+ * @internal
+ */
 final class Colorizer
 {
     /**
@@ -52,7 +55,7 @@ final class Colorizer
     }
 
     /**
-     * Remove colorize tags
+     * Remove colorization tags
      */
     public static function stripTags(string $string): string
     {
@@ -60,7 +63,7 @@ final class Colorizer
     }
 
     /**
-     * Colorize string in terminal. Usage: <color;fg=green;bg=black>green text</>
+     * Colorize a string in the terminal. Usage: <color;fg=green;bg=black>green text</>
      */
     public static function colorize(string $string): string
     {

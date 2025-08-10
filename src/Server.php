@@ -9,7 +9,6 @@ use PHPStreamServer\Core\Internal\Console\App;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\SupervisorPlugin;
 use PHPStreamServer\Core\Plugin\System\SystemPlugin;
-use Revolt\EventLoop;
 
 final class Server
 {
@@ -52,12 +51,8 @@ final class Server
 
     public function run(): int
     {
-        /** @psalm-suppress NamedArgumentNotAllowed, InvalidArgument */
-        $app = new App(...\array_merge(...\array_map(static fn(Plugin $p) => $p->registerCommands(), $this->plugins)));
-        $map = new \WeakMap();
-        $map[EventLoop::getDriver()] = \get_object_vars($this);
-        unset($this->workers, $this->plugins);
-        return $app->run($map);
+        /** @psalm-suppress PossiblyNullArgument */
+        return (new App($this->pidFile, $this->socketFile))->run($this->plugins, $this->workers);
     }
 
     public static function getVersion(): string

@@ -11,18 +11,22 @@ use PHPStreamServer\Core\Server;
 
 class StopCommand extends Command
 {
-    final public const COMMAND = 'stop';
-    final public const DESCRIPTION = 'Stop server';
-
-    public function execute(array $args): int
+    final public static function getName(): string
     {
-        /**
-         * @var array{pidFile: string, socketFile: string} $args
-         */
+        return 'stop';
+    }
 
-        $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
+    final public static function getDescription(): string
+    {
+        return 'Stop server';
+    }
+
+    public function execute(string $pidFile, string $socketFile): int
+    {
+        $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
+        $future = $bus->dispatch(new StopServerCommand());
         echo Server::NAME . " stopping ...\n";
-        $bus->dispatch(new StopServerCommand())->await();
+        $future->await();
         echo Server::NAME . " has stopped\n";
 
         return 0;

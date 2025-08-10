@@ -11,18 +11,22 @@ use PHPStreamServer\Core\Server;
 
 class ReloadCommand extends Command
 {
-    final public const COMMAND = 'reload';
-    final public const DESCRIPTION = 'Reload server';
-
-    public function execute(array $args): int
+    final public static function getName(): string
     {
-        /**
-         * @var array{pidFile: string, socketFile: string} $args
-         */
+        return 'reload';
+    }
 
-        $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
+    final public static function getDescription(): string
+    {
+        return 'Reload server';
+    }
+
+    public function execute(string $pidFile, string $socketFile): int
+    {
+        $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
+        $future = $bus->dispatch(new ReloadServerCommand());
         echo Server::NAME . " reloading ...\n";
-        $bus->dispatch(new ReloadServerCommand())->await();
+        $future->await();
         echo Server::NAME . " reloaded\n";
 
         return 0;

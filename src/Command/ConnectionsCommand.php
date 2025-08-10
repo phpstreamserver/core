@@ -15,16 +15,19 @@ use function PHPStreamServer\Core\humanFileSize;
 
 class ConnectionsCommand extends Command
 {
-    final public const COMMAND = 'connections';
-    final public const DESCRIPTION = 'Show active connections';
-
-    public function execute(array $args): int
+    final public static function getName(): string
     {
-        /**
-         * @var array{pidFile: string, socketFile: string} $args
-         */
+        return 'connections';
+    }
 
-        $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
+    final public static function getDescription(): string
+    {
+        return 'Show active connections';
+    }
+
+    public function execute(string $pidFile, string $socketFile): int
+    {
+        $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
 
         $connectionsStatus = $bus->dispatch(new GetConnectionsStatusCommand())->await();
         \assert($connectionsStatus instanceof ConnectionsStatus);

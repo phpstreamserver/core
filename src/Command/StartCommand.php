@@ -8,10 +8,8 @@ use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Exception\ServerIsRunning;
 use PHPStreamServer\Core\Internal\MasterProcess;
-use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Plugin\Supervisor\Status\WorkerInfo;
-use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
 
 use function PHPStreamServer\Core\getDriverName;
@@ -19,48 +17,43 @@ use function PHPStreamServer\Core\isRunning;
 
 class StartCommand extends Command
 {
-    final public const COMMAND = 'start';
-    final public const DESCRIPTION = 'Start server';
+    final public static function getName(): string
+    {
+        return 'start';
+    }
+
+    final public static function getDescription(): string
+    {
+        return 'Start server';
+    }
 
     public function configure(): void
     {
-        $this->options->addOptionDefinition('daemon', 'd', 'Run in daemon mode');
+        $this->addOptionDefinition('daemon', 'd', 'Run in daemon mode');
     }
 
-    public function execute(array $args): int
+    public function execute(string $pidFile, string $socketFile): int
     {
-        /**
-         * @var array{
-         *     pidFile: string,
-         *     socketFile: string,
-         *     plugins: array<Plugin>,
-         *     workers: array<Process>,
-         *     stopTimeout: int
-         * } $args
-         */
-
-        if (isRunning($args['pidFile'])) {
+        if (isRunning($pidFile)) {
             throw new ServerIsRunning();
         }
 
-        $daemonize = (bool) $this->options->getOption('daemon');
+        $daemonize = (bool) $this->getOption('daemon');
 
         $masterProcess = new MasterProcess(
-            pidFile: $args['pidFile'],
-            socketFile: $args['socketFile'],
-            plugins: $args['plugins'],
-            workers: $args['workers'],
+            pidFile: $pidFile,
+            socketFile: $socketFile,
+            plugins: $this->getPlugins(),
+            workers: $this->getWorkers(),
         );
 
-        unset($args);
-
-        /** @psalm-suppress UndefinedThisPropertyFetch, PossiblyNullFunctionCall */
-        $supervisorStatus = \Closure::bind(
-            fn(): SupervisorStatus => $this->masterContainer->getService(SupervisorStatus::class),
-            $masterProcess,
-            $masterProcess,
-        )();
-        \assert($supervisorStatus instanceof SupervisorStatus);
+        /**
+         * @var SupervisorStatus $supervisorStatus
+         * @psalm-suppress UndefinedThisPropertyFetch, PossiblyNullFunctionCall
+         */
+        $supervisorStatus = (function (): SupervisorStatus {
+            return $this->masterContainer->getService(SupervisorStatus::class);
+        })->bindTo($masterProcess, $masterProcess)();
 
         $eventLoop = getDriverName();
 

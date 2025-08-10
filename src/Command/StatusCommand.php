@@ -20,21 +20,24 @@ use function PHPStreamServer\Core\isRunning;
 
 class StatusCommand extends Command
 {
-    final public const COMMAND = 'status';
-    final public const DESCRIPTION = 'Show server status';
-
-    public function execute(array $args): int
+    final public static function getName(): string
     {
-        /**
-         * @var array{pidFile: string, socketFile: string} $args
-         */
+        return 'status';
+    }
 
-        $isRunning = isRunning($args['pidFile']);
+    final public static function getDescription(): string
+    {
+        return 'Show server status';
+    }
+
+    public function execute(string $pidFile, string $socketFile): int
+    {
+        $isRunning = isRunning($pidFile);
         $eventLoop = getDriverName();
         $startFile = getStartFile();
 
         if ($isRunning) {
-            $bus = new SocketFileMessageBus($args['socketFile']);
+            $bus = new SocketFileMessageBus($socketFile);
             $serverStatus = $bus->dispatch(new GetServerStatusCommand())->await();
             \assert($serverStatus instanceof ServerStatus);
             $supervosorStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();

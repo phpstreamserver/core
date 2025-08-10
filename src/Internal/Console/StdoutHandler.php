@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal\Console;
 
-use PHPStreamServer\Core\Console\Colorizer;
-
 /**
- * Handler for redirect standard output to custom stream with colorize filters
+ * Redirects standard output to a custom stream with colorization filters
  * @internal
  */
 final class StdoutHandler
 {
     private static bool $isRegistered = false;
+
     /** @var resource */
     private static $stdout;
+
     /** @var resource */
     private static $stderr;
 
@@ -26,21 +26,19 @@ final class StdoutHandler
      * @param resource|string $stdout
      * @param resource|string $stderr
      */
-    public static function register(mixed $stdout = 'php://stdout', mixed $stderr = 'php://stderr'): void
+    public static function register(mixed $stdout, mixed $stderr, bool $colors = true, bool $quiet = false): void
     {
         if (self::$isRegistered) {
-            throw new \RuntimeException('StdoutHandler already registered');
-        }
-
-        if (\is_string($stdout)) {
-            self::$stdout = \fopen($stdout, 'ab');
-        }
-
-        if (\is_string($stderr)) {
-            self::$stderr = \fopen($stderr, 'ab');
+            throw new \RuntimeException('StdoutHandler is already registered');
         }
 
         self::$isRegistered = true;
+        self::$stdout = \is_string($stdout) ? \fopen($stdout, 'ab') : $stdout;
+        self::$stderr = \is_string($stderr) ? \fopen($stderr, 'ab') : $stderr;
+
+        if (!$colors) {
+            Colorizer::disableColor();
+        }
 
         $hasColorSupport = Colorizer::hasColorSupport(self::$stdout);
         \ob_start(static function (string $chunk, int $phase) use ($hasColorSupport): string {
@@ -53,11 +51,15 @@ final class StdoutHandler
 
             return '';
         }, 1);
+
+        if ($quiet) {
+            self::disableStdout();
+        }
     }
 
     public static function disableStdout(): void
     {
-        $nullResource = \fopen('/dev/null', 'wb');
+        $nullResource = \fopen('/dev/null', 'ab');
         self::$stdout = $nullResource;
         self::$stderr = $nullResource;
         \ob_end_clean();

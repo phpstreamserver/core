@@ -13,16 +13,19 @@ use PHPStreamServer\Core\Plugin\Supervisor\Status\WorkerInfo;
 
 class WorkersCommand extends Command
 {
-    final public const COMMAND = 'workers';
-    final public const DESCRIPTION = 'Show workers status';
-
-    public function execute(array $args): int
+    final public static function getName(): string
     {
-        /**
-         * @var array{pidFile: string, socketFile: string} $args
-         */
+        return 'workers';
+    }
 
-        $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
+    final public static function getDescription(): string
+    {
+        return 'Show workers status';
+    }
+
+    public function execute(string $pidFile, string $socketFile): int
+    {
+        $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
 
         $supervisorStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
         \assert($supervisorStatus instanceof SupervisorStatus);

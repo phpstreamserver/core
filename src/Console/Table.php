@@ -15,18 +15,19 @@ final class Table implements \Stringable
     {
     }
 
-    public function setHeaderRow(array $row): self
+    public function setHeaderRow(iterable $row): self
     {
+        $col = 0;
         $this->headerRow = true;
-        foreach ($row as $col => $content) {
-            $this->data[$this->rowIndex][$col] = (string) $content;
+        foreach ($row as $content) {
+            $this->data[$this->rowIndex][$col++] = (string) $content;
         }
         $this->rowIndex++;
 
         return $this;
     }
 
-    public function addRows(array $rows): self
+    public function addRows(iterable $rows): self
     {
         foreach ($rows as $row) {
             $this->addRow($row);
@@ -35,10 +36,11 @@ final class Table implements \Stringable
         return $this;
     }
 
-    public function addRow(array $row): self
+    public function addRow(iterable $row): self
     {
-        foreach (\array_values($row) as $col => $content) {
-            $this->data[$this->rowIndex][$col] = (string) $content;
+        $col = 0;
+        foreach ($row as $content) {
+            $this->data[$this->rowIndex][$col++] = (string) $content;
         }
         $this->rowIndex++;
 

@@ -17,16 +17,19 @@ use function PHPStreamServer\Core\humanFileSize;
 
 class ProcessesCommand extends Command
 {
-    final public const COMMAND = 'processes';
-    final public const DESCRIPTION = 'Show processes status';
-
-    public function execute(array $args): int
+    final public static function getName(): string
     {
-        /**
-         * @var array{pidFile: string, socketFile: string} $args
-         */
+        return 'processes';
+    }
 
-        $bus = new ExternalProcessMessageBus($args['pidFile'], $args['socketFile']);
+    final public static function getDescription(): string
+    {
+        return 'Show processes status';
+    }
+
+    public function execute(string $pidFile, string $socketFile): int
+    {
+        $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
 
         $processesStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
         \assert($processesStatus instanceof SupervisorStatus);
