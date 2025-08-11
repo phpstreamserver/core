@@ -20,6 +20,10 @@ abstract class Plugin
      */
     protected Status $status;
 
+    final public function __destruct()
+    {
+    }
+
     /**
      * @internal
      */
