@@ -24,15 +24,8 @@ final class Colorizer
         'gray' => 8,
     ];
 
-    private static bool $color = true;
-
     private function __construct()
     {
-    }
-
-    public static function disableColor(): void
-    {
-        self::$color = false;
     }
 
     /**
@@ -51,7 +44,7 @@ final class Colorizer
             return true;
         }
 
-        return self::$color && \posix_isatty($stream);
+        return \posix_isatty($stream);
     }
 
     /**

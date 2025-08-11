@@ -10,13 +10,17 @@ namespace PHPStreamServer\Core\Internal\Console;
  */
 final class StdoutHandler
 {
-    private static bool $isRegistered = false;
+    /** @var resource|null */
+    private static mixed $stdout = null;
 
-    /** @var resource */
-    private static $stdout;
+    /** @var resource|null */
+    private static mixed $stderr = null;
 
-    /** @var resource */
-    private static $stderr;
+    /** @var \Closure(string):string|null */
+    private static \Closure|null $stdoutHandler = null;
+
+    /** @var \Closure(string):string|null */
+    private static \Closure|null $stderrHandler = null;
 
     private function __construct()
     {
@@ -28,57 +32,51 @@ final class StdoutHandler
      */
     public static function register(mixed $stdout, mixed $stderr, bool $colors = true, bool $quiet = false): void
     {
-        if (self::$isRegistered) {
-            throw new \RuntimeException('StdoutHandler is already registered');
-        }
-
-        self::$isRegistered = true;
         self::$stdout = \is_string($stdout) ? \fopen($stdout, 'ab') : $stdout;
         self::$stderr = \is_string($stderr) ? \fopen($stderr, 'ab') : $stderr;
+        self::$stdoutHandler = $colors && Colorizer::hasColorSupport(self::$stdout) ? Colorizer::colorize(...) : Colorizer::stripTags(...);
+        self::$stderrHandler = $colors && Colorizer::hasColorSupport(self::$stderr) ? Colorizer::colorize(...) : Colorizer::stripTags(...);
 
-        if (!$colors) {
-            Colorizer::disableColor();
-        }
-
-        $hasColorSupport = Colorizer::hasColorSupport(self::$stdout);
-        \ob_start(static function (string $chunk, int $phase) use ($hasColorSupport): string {
-            $isWrite = ($phase & \PHP_OUTPUT_HANDLER_WRITE) === \PHP_OUTPUT_HANDLER_WRITE;
-            if ($isWrite && $chunk !== '') {
-                $buffer = $hasColorSupport ? Colorizer::colorize($chunk) : Colorizer::stripTags($chunk);
-                \fwrite(self::$stdout, $buffer);
-                \fflush(self::$stdout);
+        \ob_start(static function (string $chunk, int $phase): string {
+            if (($phase & \PHP_OUTPUT_HANDLER_WRITE) === \PHP_OUTPUT_HANDLER_WRITE) {
+                self::stdout($chunk);
             }
 
             return '';
         }, 1);
 
         if ($quiet) {
-            self::disableStdout();
+            self::suppress();
         }
     }
 
-    public static function disableStdout(): void
+    public static function suppress(): void
     {
-        $nullResource = \fopen('/dev/null', 'ab');
-        self::$stdout = $nullResource;
-        self::$stderr = $nullResource;
         \ob_end_clean();
-        \ob_start(static fn() => '', 1);
+        \ob_start(static fn(): string => '', 1);
+        self::$stdout = null;
+        self::$stderr = null;
+        self::$stdoutHandler = null;
+        self::$stderrHandler = null;
     }
 
-    /**
-     * @return resource
-     */
-    public static function getStdout()
+    public static function stdout(string $buffer): void
     {
-        return self::$stdout;
+        if (self::$stdout === null || $buffer === '') {
+            return;
+        }
+
+        \assert(self::$stdoutHandler !== null);
+        \fwrite(self::$stdout, self::$stdoutHandler->__invoke($buffer));
     }
 
-    /**
-     * @return resource
-     */
-    public static function getStderr()
+    public static function stderr(string $buffer): void
     {
-        return self::$stderr;
+        if (self::$stderr === null || $buffer === '') {
+            return;
+        }
+
+        \assert(self::$stderrHandler !== null);
+        \fwrite(self::$stderr, self::$stderrHandler->__invoke($buffer));
     }
 }

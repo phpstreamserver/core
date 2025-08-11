@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core;
 
-use Amp\ByteStream\WritableResourceStream;
-use PHPStreamServer\Core\Internal\Console\StdoutHandler;
-use Revolt\EventLoop;
 use Revolt\EventLoop\DriverFactory;
 
 function getStartFile(): string
@@ -111,22 +108,6 @@ function getMemoryUsageByPid(int $pid): int
 function getDriverName(): string
 {
     return (new \ReflectionObject((new DriverFactory())->create()))->getShortName();
-}
-
-function getStdout(): WritableResourceStream
-{
-    static $map;
-    $map ??= new \WeakMap();
-
-    return $map[EventLoop::getDriver()] ??= new WritableResourceStream(StdoutHandler::getStdOut());
-}
-
-function getStderr(): WritableResourceStream
-{
-    static $map;
-    $map ??= new \WeakMap();
-
-    return $map[EventLoop::getDriver()] ??= new WritableResourceStream(StdoutHandler::getStderr());
 }
 
 function getCpuCount(): int

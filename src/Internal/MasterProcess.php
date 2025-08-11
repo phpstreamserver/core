@@ -133,7 +133,7 @@ final class MasterProcess
             return 0;
         } elseif ($daemonize) {
             // Runs in daemonized master process
-            StdoutHandler::disableStdout();
+            StdoutHandler::suppress();
         }
 
         $this->start();

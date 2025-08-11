@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Logger;
 
-use PHPStreamServer\Core\Internal\Console\Colorizer;
+use PHPStreamServer\Core\Internal\Console\StdoutHandler;
 use Psr\Log\LoggerTrait;
-
-use function PHPStreamServer\Core\getStderr;
 
 /**
  * @internal
@@ -36,14 +34,11 @@ final class ConsoleLogger implements LoggerInterface
     ];
 
     private ContextNormalizer $contextNormalizer;
-    private bool $colorSupport;
     private string $channel = 'server';
 
     public function __construct()
     {
         $this->contextNormalizer = new ContextNormalizer();
-        /** @psalm-suppress PossiblyInvalidArgument */
-        $this->colorSupport = Colorizer::hasColorSupport(getStderr()->getResource());
     }
 
     public function withChannel(string $channel): self
@@ -72,8 +67,6 @@ final class ConsoleLogger implements LoggerInterface
             $context,
         ));
 
-        $message = $this->colorSupport ? Colorizer::colorize($message) : Colorizer::stripTags($message);
-
-        getStderr()->write($message . "\n");
+        StdoutHandler::stderr($message . "\n");
     }
 }
