@@ -317,6 +317,10 @@ final class MasterProcess
         unset($this->plugins);
         unset($this->suspension);
 
+        while (\ob_get_level() > 0) {
+            \ob_end_clean();
+        }
+
         \gc_collect_cycles();
         \gc_mem_caches();
         \clearstatcache();

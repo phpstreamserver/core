@@ -38,7 +38,8 @@ final class StdoutHandler
         self::$stderrHandler = $colors && Colorizer::hasColorSupport(self::$stderr) ? Colorizer::colorize(...) : Colorizer::stripTags(...);
 
         \ob_start(static function (string $chunk, int $phase): string {
-            if (($phase & \PHP_OUTPUT_HANDLER_WRITE) === \PHP_OUTPUT_HANDLER_WRITE) {
+            $isWrite = ($phase & \PHP_OUTPUT_HANDLER_WRITE) === \PHP_OUTPUT_HANDLER_WRITE;
+            if ($isWrite) {
                 self::stdout($chunk);
             }
 
