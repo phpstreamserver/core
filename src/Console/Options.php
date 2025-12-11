@@ -82,6 +82,6 @@ final class Options
         $shortName = $definition?->shortName;
         $default = $definition?->default;
 
-        return $this->parsedOptions[$fullName] ?? $this->parsedOptions[$shortName] ?? $default;
+        return $this->parsedOptions[$fullName ?? ''] ?? $this->parsedOptions[$shortName ?? ''] ?? $default;
     }
 }
