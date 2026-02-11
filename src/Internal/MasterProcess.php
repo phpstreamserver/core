@@ -171,8 +171,12 @@ final class MasterProcess
 
         $this->masterContainer->setParameter('pid', \posix_getpid());
 
-        $stopCallback = function (): void { $this->stop(); };
-        $reloadCallback = function (): void { $this->reload(); };
+        $stopCallback = function (): void {
+            $this->stop();
+        };
+        $reloadCallback = function (): void {
+            $this->reload();
+        };
         EventLoop::onSignal(SIGINT, $stopCallback);
         EventLoop::onSignal(SIGTERM, $stopCallback);
         EventLoop::onSignal(SIGHUP, $stopCallback);

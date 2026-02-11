@@ -114,7 +114,9 @@ final class ErrorHandler
             return;
         }
 
-        \register_shutdown_function(static function (): never { exit(255); });
+        \register_shutdown_function(static function (): never {
+            exit(255);
+        });
 
         EventLoop::getDriver()->stop();
         EventLoop::setDriver(new StreamSelectDriver());
@@ -122,7 +124,9 @@ final class ErrorHandler
         $errorAsException = new \ErrorException($error['message'], 0, $error['type'], $error['file'], $error['line']);
         self::$logger->critical(self::formatExceptionMessage($errorAsException));
 
-        EventLoop::defer(static function (): void { EventLoop::defer(EventLoop::getDriver()->stop(...)); });
+        EventLoop::defer(static function (): void {
+            EventLoop::defer(EventLoop::getDriver()->stop(...));
+        });
         EventLoop::run();
     }
 
