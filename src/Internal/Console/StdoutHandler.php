@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal\Console;
 
+use Amp\ByteStream\WritableResourceStream;
+
 /**
  * Redirects standard output to a custom stream with colorization filters
  * @internal
  */
 final class StdoutHandler
 {
-    /** @var resource|null */
-    private static mixed $stdout = null;
+    private static WritableResourceStream|null $stdout = null;
 
-    /** @var resource|null */
-    private static mixed $stderr = null;
+    private static WritableResourceStream|null $stderr = null;
 
     /** @var \Closure(string):string|null */
     private static \Closure|null $stdoutHandler = null;
@@ -32,14 +32,17 @@ final class StdoutHandler
      */
     public static function register(mixed $stdout, mixed $stderr, bool $colors = true, bool $quiet = false): void
     {
-        self::$stdout = \is_string($stdout) ? \fopen($stdout, 'ab') : $stdout;
-        self::$stderr = \is_string($stderr) ? \fopen($stderr, 'ab') : $stderr;
-        self::$stdoutHandler = $colors && Colorizer::hasColorSupport(self::$stdout) ? Colorizer::colorize(...) : Colorizer::stripTags(...);
-        self::$stderrHandler = $colors && Colorizer::hasColorSupport(self::$stderr) ? Colorizer::colorize(...) : Colorizer::stripTags(...);
+        $stdoutResource = \is_string($stdout) ? \fopen($stdout, 'ab') : $stdout;
+        $stderrResource = \is_string($stderr) ? \fopen($stderr, 'ab') : $stderr;
+        self::$stdout = new WritableResourceStream($stdoutResource);
+        self::$stderr = new WritableResourceStream($stderrResource);
+        self::$stdoutHandler = $colors && Colorizer::hasColorSupport($stdoutResource) ? Colorizer::colorize(...) : Colorizer::stripTags(...);
+        self::$stderrHandler = $colors && Colorizer::hasColorSupport($stderrResource) ? Colorizer::colorize(...) : Colorizer::stripTags(...);
+        unset($stdoutResource, $stderrResource);
 
         \ob_start(static function (string $chunk, int $phase): string {
             $isWrite = ($phase & \PHP_OUTPUT_HANDLER_WRITE) === \PHP_OUTPUT_HANDLER_WRITE;
-            if ($isWrite) {
+            if ($isWrite && $chunk !== '') {
                 self::stdout($chunk);
             }
 
@@ -63,21 +66,21 @@ final class StdoutHandler
 
     public static function stdout(string $buffer): void
     {
-        if (self::$stdout === null || $buffer === '') {
+        if (self::$stdout === null) {
             return;
         }
 
         \assert(self::$stdoutHandler !== null);
-        \fwrite(self::$stdout, self::$stdoutHandler->__invoke($buffer));
+        self::$stdout->write(self::$stdoutHandler->__invoke($buffer));
     }
 
     public static function stderr(string $buffer): void
     {
-        if (self::$stderr === null || $buffer === '') {
+        if (self::$stderr === null) {
             return;
         }
 
         \assert(self::$stderrHandler !== null);
-        \fwrite(self::$stderr, self::$stderrHandler->__invoke($buffer));
+        self::$stderr->write(self::$stderrHandler->__invoke($buffer));
     }
 }
