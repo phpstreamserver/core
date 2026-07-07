@@ -9,15 +9,26 @@ namespace PHPStreamServer\Core\Logger;
  */
 final class ContextNormalizer
 {
+    private const MAX_DEPTH = 16;
+
     public function __construct()
     {
     }
 
     public function normalize(mixed $data): mixed
     {
+        return $this->doNormalize($data, 0);
+    }
+
+    private function doNormalize(mixed $data, int $depth): mixed
+    {
+        if ($depth > self::MAX_DEPTH) {
+            return '[max-depth]';
+        }
+
         if (\is_array($data)) {
             foreach ($data as $key => $value) {
-                $data[$key] = $this->normalize($value);
+                $data[$key] = $this->doNormalize($value, $depth + 1);
             }
 
             return $data;
@@ -31,16 +42,28 @@ final class ContextNormalizer
             return $this->normalizeException($data);
         }
 
+        if ($data instanceof \DateTimeInterface) {
+            return $data->format(\DateTimeInterface::RFC3339);
+        }
+
+        if ($data instanceof \UnitEnum) {
+            return \sprintf('[enum(%s): %s]', $data::class, $data->name);
+        }
+
         if ($data instanceof \JsonSerializable) {
-            return $this->normalize($data->jsonSerialize());
+            try {
+                return $this->doNormalize($data->jsonSerialize(), $depth + 1);
+            } catch (\Throwable) {
+                return \sprintf('[object(%s)]', $this->parseAnonymousClass($data::class));
+            }
         }
 
         if ($data instanceof \Stringable) {
-            return $data->__toString();
-        }
-
-        if ($data instanceof \DateTimeInterface) {
-            return $data->format(\DateTimeInterface::RFC3339);
+            try {
+                return $data->__toString();
+            } catch (\Throwable) {
+                return \sprintf('[object(%s)]', $this->parseAnonymousClass($data::class));
+            }
         }
 
         if (\is_object($data)) {
