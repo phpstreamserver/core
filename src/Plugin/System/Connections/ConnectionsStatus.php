@@ -7,6 +7,7 @@ namespace PHPStreamServer\Core\Plugin\System\Connections;
 use PHPStreamServer\Core\Message\ConnectionClosedEvent;
 use PHPStreamServer\Core\Message\ConnectionCreatedEvent;
 use PHPStreamServer\Core\Message\ProcessDetachedEvent;
+use PHPStreamServer\Core\Message\ProcessExitEvent;
 use PHPStreamServer\Core\Message\ProcessSpawnedEvent;
 use PHPStreamServer\Core\Message\RequestCounterIncreaseEvent;
 use PHPStreamServer\Core\Message\RxCounterIncreaseEvent;
@@ -32,6 +33,10 @@ final class ConnectionsStatus
             $processConnections[$message->pid] = new ProcessConnectionsInfo(
                 pid: $message->pid,
             );
+        });
+
+        $handler->subscribe(ProcessExitEvent::class, static function (ProcessExitEvent $message) use (&$processConnections): void {
+            unset($processConnections[$message->pid]);
         });
 
         $handler->subscribe(ProcessDetachedEvent::class, static function (ProcessDetachedEvent $message) use (&$processConnections): void {
