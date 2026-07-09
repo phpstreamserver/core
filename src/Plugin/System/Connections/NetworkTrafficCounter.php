@@ -6,64 +6,77 @@ namespace PHPStreamServer\Core\Plugin\System\Connections;
 
 use Amp\Socket\InternetAddress;
 use Amp\Socket\Socket;
-use PHPStreamServer\Core\Message\CompositeMessage;
-use PHPStreamServer\Core\Message\ConnectionClosedEvent;
-use PHPStreamServer\Core\Message\ConnectionCreatedEvent;
-use PHPStreamServer\Core\Message\RequestCounterIncreaseEvent;
-use PHPStreamServer\Core\Message\RxCounterIncreaseEvent;
-use PHPStreamServer\Core\Message\TxCounterIncreaseEvent;
+use PHPStreamServer\Core\Message\NetworkTrafficDeltaEvent;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
-use PHPStreamServer\Core\MessageBus\MessageInterface;
 use Revolt\EventLoop;
 
 final class NetworkTrafficCounter
 {
-    private const FLUSH_PERIOD = 0.5;
+    private const FLUSH_PERIOD = 2;
+
+    private readonly int $pid;
+    private int $nextConnectionId = 0;
+    private bool $flushInProgress = false;
 
     /**
-     * @var list<MessageInterface>
+     * @var \WeakMap<Socket, int>
      */
-    private array $events = [];
+    private \WeakMap $connectionIds;
 
-    public function __construct(MessageBusInterface $messageBus)
+    /**
+     * @var array<int, Connection>
+     */
+    private array $createdConnections = [];
+
+    /**
+     * @var array<int>
+     */
+    private array $closedConnectionIds = [];
+
+    /**
+     * @var array<int, int>
+     */
+    private array $rxTrafficByConnection = [];
+
+    /**
+     * @var array<int, int>
+     */
+    private array $txTrafficByConnection = [];
+
+    private int $requests = 0;
+
+    public function __construct(private readonly MessageBusInterface $messageBus)
     {
-        $events = &$this->events;
+        $this->pid = \posix_getpid();
+        /** @var \WeakMap<Socket, int> */
+        $this->connectionIds = new \WeakMap();
 
-        EventLoop::repeat(self::FLUSH_PERIOD, static function () use (&$events, $messageBus): void {
-            if ($events !== []) {
-                $messageBus->dispatch(new CompositeMessage($events));
-                $events = [];
-            }
-        });
+        EventLoop::unreference(EventLoop::repeat(self::FLUSH_PERIOD, $this->flush(...)));
     }
 
     public function addConnection(Socket $socket): void
     {
+        $connectionId = $this->getConnectionId($socket);
         $localAddress = $socket->getLocalAddress();
         $remoteAddress = $socket->getRemoteAddress();
         \assert($localAddress instanceof InternetAddress);
         \assert($remoteAddress instanceof InternetAddress);
 
-        $this->events[] = new ConnectionCreatedEvent(
-            pid: \posix_getpid(),
-            connectionId: \spl_object_id($socket),
-            connection: new Connection(
-                pid: \posix_getpid(),
-                connectedAt: new \DateTimeImmutable('now'),
-                localIp: $localAddress->getAddress(),
-                localPort: (string) $localAddress->getPort(),
-                remoteIp: $remoteAddress->getAddress(),
-                remotePort: (string) $remoteAddress->getPort(),
-            ),
+        $this->createdConnections[$connectionId] = new Connection(
+            pid: $this->pid,
+            connectedAt: new \DateTimeImmutable('now'),
+            localIp: $localAddress->getAddress(),
+            localPort: (string) $localAddress->getPort(),
+            remoteIp: $remoteAddress->getAddress(),
+            remotePort: (string) $remoteAddress->getPort(),
         );
     }
 
     public function removeConnection(Socket $socket): void
     {
-        $this->events[] = new ConnectionClosedEvent(
-            pid: \posix_getpid(),
-            connectionId: \spl_object_id($socket),
-        );
+        $connectionId = $this->getConnectionId($socket);
+        $this->closedConnectionIds[] = $connectionId;
+        $this->connectionIds->offsetUnset($socket);
     }
 
     /**
@@ -71,11 +84,9 @@ final class NetworkTrafficCounter
      */
     public function incRx(Socket $socket, int $val): void
     {
-        $this->events[] = new RxCounterIncreaseEvent(
-            pid: \posix_getpid(),
-            connectionId: \spl_object_id($socket),
-            rx: $val,
-        );
+        $connectionId = $this->getConnectionId($socket);
+        $this->rxTrafficByConnection[$connectionId] ??= 0;
+        $this->rxTrafficByConnection[$connectionId] += $val;
     }
 
     /**
@@ -83,11 +94,9 @@ final class NetworkTrafficCounter
      */
     public function incTx(Socket $socket, int $val): void
     {
-        $this->events[] = new TxCounterIncreaseEvent(
-            pid: \posix_getpid(),
-            connectionId: \spl_object_id($socket),
-            tx: $val,
-        );
+        $connectionId = $this->getConnectionId($socket);
+        $this->txTrafficByConnection[$connectionId] ??= 0;
+        $this->txTrafficByConnection[$connectionId] += $val;
     }
 
     /**
@@ -95,9 +104,53 @@ final class NetworkTrafficCounter
      */
     public function incRequests(int $val = 1): void
     {
-        $this->events[] = new RequestCounterIncreaseEvent(
-            pid: \posix_getpid(),
-            requests: $val,
-        );
+        $this->requests += $val;
+    }
+
+    private function getConnectionId(Socket $socket): int
+    {
+        if (!$this->connectionIds->offsetExists($socket)) {
+            $this->connectionIds->offsetSet($socket, ++$this->nextConnectionId);
+        }
+
+        return $this->connectionIds->offsetGet($socket);
+    }
+
+    private function flush(): void
+    {
+        $hasPendingEvents = $this->createdConnections !== []
+            || $this->closedConnectionIds !== []
+            || $this->rxTrafficByConnection !== []
+            || $this->txTrafficByConnection !== []
+            || $this->requests !== 0
+        ;
+
+        if ($this->flushInProgress || !$hasPendingEvents) {
+            return;
+        }
+
+        $createdConnections = $this->createdConnections;
+        $closedConnectionIds = $this->closedConnectionIds;
+        $rxTrafficByConnection = $this->rxTrafficByConnection;
+        $txTrafficByConnection = $this->txTrafficByConnection;
+        $requests = $this->requests;
+
+        $this->createdConnections = [];
+        $this->closedConnectionIds = [];
+        $this->rxTrafficByConnection = [];
+        $this->txTrafficByConnection = [];
+        $this->requests = 0;
+        $this->flushInProgress = true;
+
+        $this->messageBus->dispatch(new NetworkTrafficDeltaEvent(
+            pid: $this->pid,
+            createdConnections: $createdConnections,
+            closedConnectionIds: $closedConnectionIds,
+            rxTrafficByConnection: $rxTrafficByConnection,
+            txTrafficByConnection: $txTrafficByConnection,
+            requests: $requests,
+        ))->finally(function (): void {
+            $this->flushInProgress = false;
+        });
     }
 }

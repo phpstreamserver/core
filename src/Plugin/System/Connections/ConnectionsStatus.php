@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System\Connections;
 
-use PHPStreamServer\Core\Message\ConnectionClosedEvent;
-use PHPStreamServer\Core\Message\ConnectionCreatedEvent;
+use PHPStreamServer\Core\Message\NetworkTrafficDeltaEvent;
 use PHPStreamServer\Core\Message\ProcessDetachedEvent;
 use PHPStreamServer\Core\Message\ProcessExitEvent;
 use PHPStreamServer\Core\Message\ProcessSpawnedEvent;
-use PHPStreamServer\Core\Message\RequestCounterIncreaseEvent;
-use PHPStreamServer\Core\Message\RxCounterIncreaseEvent;
-use PHPStreamServer\Core\Message\TxCounterIncreaseEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 
 final class ConnectionsStatus
@@ -43,32 +39,36 @@ final class ConnectionsStatus
             unset($processConnections[$message->pid]);
         });
 
-        $handler->subscribe(RxCounterIncreaseEvent::class, static function (RxCounterIncreaseEvent $message) use (&$processConnections): void {
-            $processConnection = $processConnections[$message->pid];
-            if (isset($processConnection->connections[$message->connectionId])) {
-                $processConnection->connections[$message->connectionId]->rx += $message->rx;
+        $handler->subscribe(NetworkTrafficDeltaEvent::class, static function (NetworkTrafficDeltaEvent $message) use (&$processConnections): void {
+            if (!isset($processConnections[$message->pid])) {
+                return;
             }
-            $processConnection->rx += $message->rx;
-        });
 
-        $handler->subscribe(TxCounterIncreaseEvent::class, static function (TxCounterIncreaseEvent $message) use (&$processConnections): void {
             $processConnection = $processConnections[$message->pid];
-            if (isset($processConnection->connections[$message->connectionId])) {
-                $processConnection->connections[$message->connectionId]->tx += $message->tx;
+
+            $processConnection->requests += $message->requests;
+
+            foreach ($message->createdConnections as $connectionId => $connection) {
+                $processConnection->connections[$connectionId] = $connection;
             }
-            $processConnection->tx += $message->tx;
-        });
 
-        $handler->subscribe(RequestCounterIncreaseEvent::class, static function (RequestCounterIncreaseEvent $message) use (&$processConnections): void {
-            $processConnections[$message->pid]->requests += $message->requests;
-        });
+            foreach ($message->rxTrafficByConnection as $connectionId => $bytes) {
+                if (isset($processConnection->connections[$connectionId])) {
+                    $processConnection->connections[$connectionId]->rx += $bytes;
+                }
+                $processConnection->rx += $bytes;
+            }
 
-        $handler->subscribe(ConnectionCreatedEvent::class, static function (ConnectionCreatedEvent $message) use (&$processConnections): void {
-            $processConnections[$message->pid]->connections[$message->connectionId] = $message->connection;
-        });
+            foreach ($message->txTrafficByConnection as $connectionId => $bytes) {
+                if (isset($processConnection->connections[$connectionId])) {
+                    $processConnection->connections[$connectionId]->tx += $bytes;
+                }
+                $processConnection->tx += $bytes;
+            }
 
-        $handler->subscribe(ConnectionClosedEvent::class, static function (ConnectionClosedEvent $message) use (&$processConnections): void {
-            unset($processConnections[$message->pid]->connections[$message->connectionId]);
+            foreach ($message->closedConnectionIds as $connectionId) {
+                unset($processConnection->connections[$connectionId]);
+            }
         });
     }
 
