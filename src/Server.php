@@ -31,8 +31,8 @@ final class Server
     ) {
         $this->pidFile ??= namespace\getDefaultPidFile();
         $this->socketFile ??= namespace\getDefaultSocketFile();
-        $this->addPlugin(new SystemPlugin());
-        $this->addPlugin(new SupervisorPlugin($stopTimeout ?? 10, $restartDelay ?? 0.25));
+        $this->addPlugin(new SystemPlugin(stopTimeout: $stopTimeout ?? 10));
+        $this->addPlugin(new SupervisorPlugin(restartDelay: $restartDelay ?? 0.25));
     }
 
     public function addPlugin(Plugin ...$plugins): self

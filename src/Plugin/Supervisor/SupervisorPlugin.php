@@ -27,14 +27,15 @@ final class SupervisorPlugin extends Plugin
     private MessageHandlerInterface $handler;
 
     public function __construct(
-        private readonly int $stopTimeout,
         private readonly float $restartDelay,
     ) {
     }
 
     protected function beforeStart(): void
     {
-        $this->supervisor = new Supervisor($this->status, $this->stopTimeout, $this->restartDelay);
+        /** @var int $stopTimeout */
+        $stopTimeout = $this->masterContainer->getParameter('stop_timeout');
+        $this->supervisor = new Supervisor($this->status, $stopTimeout, $this->restartDelay);
         $this->supervisorStatus = new SupervisorStatus();
         $this->masterContainer->setService(SupervisorStatus::class, $this->supervisorStatus);
     }

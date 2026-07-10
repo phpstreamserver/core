@@ -22,8 +22,14 @@ use PHPStreamServer\Core\Plugin\System\Status\ServerStatus;
  */
 final class SystemPlugin extends Plugin
 {
-    public function __construct()
+    public function __construct(
+        private readonly int $stopTimeout,
+    ) {
+    }
+
+    protected function beforeStart(): void
     {
+        $this->masterContainer->setParameter('stop_timeout', $this->stopTimeout);
     }
 
     public function onStart(): void
