@@ -84,7 +84,6 @@ final class SupervisorStatus
             };
 
             EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $checkMemoryUsageClosure);
-            EventLoop::delay(0.2, $checkMemoryUsageClosure);
         });
     }
 

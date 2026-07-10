@@ -32,7 +32,7 @@ class WorkerProcess implements Process
 {
     use ProcessUserChange;
 
-    final public const HEARTBEAT_PERIOD = 2;
+    final public const HEARTBEAT_PERIOD = 2.5;
     final public const RELOAD_EXIT_CODE = 100;
     private const GC_PERIOD = 120;
 
