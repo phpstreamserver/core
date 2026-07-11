@@ -136,16 +136,17 @@ final class MasterProcess
             StdoutHandler::suppress();
         }
 
+        // Master process context
         $this->start();
         $ret = $this->suspension->suspend();
 
-        // child process start
+        // Child process context
         if ($ret instanceof Process) {
             $this->free();
             exit($ret->run($this->workerContainer));
         }
 
-        // master process shutdown
+        // Master process shutdown
         \assert(\is_int($ret));
         $this->onMasterShutdown();
         return $ret;
