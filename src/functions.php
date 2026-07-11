@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core;
 
+use Amp\ByteStream\ReadableStream;
+use Amp\ByteStream\StreamException;
 use Revolt\EventLoop\DriverFactory;
 
 function getStartFile(): string
@@ -120,4 +122,18 @@ function getCpuCount(): int
     } else {
         return 1;
     }
+}
+
+function readExactly(ReadableStream $socket, int $length): string
+{
+    $data = '';
+    while (\strlen($data) < $length) {
+        $chunk = $socket->read(limit: $length - \strlen($data));
+        if ($chunk === null) {
+            throw new StreamException(\sprintf('Socket closed after receiving %d of %d expected bytes', \strlen($data), $length));
+        }
+        $data .= $chunk;
+    }
+
+    return $data;
 }

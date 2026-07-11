@@ -14,6 +14,7 @@ use Revolt\EventLoop;
 
 use function Amp\async;
 use function Amp\weakClosure;
+use function PHPStreamServer\Core\readExactly;
 
 final class SocketFileMessageHandler implements MessageHandlerInterface, MessageBusInterface
 {
@@ -37,58 +38,47 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
 
         EventLoop::queue(static function () use (&$server, &$subscribers) {
             while ($socket = $server->accept()) {
-                $data = $socket->read(limit: self::CHUNK_SIZE);
-
-                // if socket is not readable anymore
-                if ($data === null) {
-                    continue;
-                }
-
-                ['size' => $size, 'gzip' => $compressed, 'data' => $data] = \unpack('Vsize/vgzip/a*data', $data);
-
-                $i = 0;
-                while (\strlen($data) < $size && $i++ < 5000) {
-                    $data .= $socket->read(limit: self::CHUNK_SIZE);
-                }
-
-                if ($compressed) {
-                    $data = \gzinflate($data);
-                }
-
-                $message = \unserialize($data);
-                \assert($message instanceof MessageInterface);
-                $return = null;
-
-                foreach ($subscribers[$message::class] ?? [] as $subscriber) {
-                    if (null !== $subscriberReturn = $subscriber($message)) {
-                        $return = $subscriberReturn;
-                        break;
-                    }
-                }
-
-                $serializedMessage = \serialize($return);
-                $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > self::COMPRESS_FROM;
-
-                if ($compressMessage) {
-                    $serializedMessage = \gzdeflate($serializedMessage, 1);
-                }
-
-                $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
-
                 try {
+                    $header = readExactly($socket, 6);
+                    ['size' => $size, 'gzip' => $compressed] = \unpack('Vsize/vgzip', $header);
+                    $data = readExactly($socket, $size);
+
+                    if ($compressed) {
+                        $data = \gzinflate($data);
+                    }
+
+                    $message = \unserialize($data);
+                    \assert($message instanceof MessageInterface);
+                    $return = null;
+
+                    foreach ($subscribers[$message::class] ?? [] as $subscriber) {
+                        if (null !== $subscriberReturn = $subscriber($message)) {
+                            $return = $subscriberReturn;
+                            break;
+                        }
+                    }
+
+                    $serializedMessage = \serialize($return);
+                    $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > self::COMPRESS_FROM;
+
+                    if ($compressMessage) {
+                        $serializedMessage = \gzdeflate($serializedMessage, 1);
+                    }
+
+                    $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
+
                     $socket->write($payload);
                 } catch (StreamException) {
                     // if socket is not writable anymore
-                    continue;
+                } finally {
+                    $socket->end();
                 }
-
-                $socket->end();
             }
         });
 
         $this->subscribe(CompositeMessage::class, weakClosure(function (CompositeMessage $event) {
             foreach ($event->messages as $message) {
-                $this->dispatch($message);
+                $this->dispatch($message)->await();
             }
         }));
     }

@@ -15,6 +15,7 @@ use Revolt\EventLoop;
 
 use function Amp\async;
 use function Amp\delay;
+use function PHPStreamServer\Core\readExactly;
 
 final class SocketFileMessageBus implements GracefulMessageBusInterface
 {
@@ -58,15 +59,9 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
             $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
 
             $socket->write($payload);
-            $data = $socket->read(limit: SocketFileMessageHandler::CHUNK_SIZE);
-            \assert(\is_string($data));
-
-            ['size' => $size, 'gzip' => $compressed, 'data' => $data] = \unpack('Vsize/vgzip/a*data', $data);
-
-            $i = 0;
-            while (\strlen($data) < $size && $i++ < 5000) {
-                $data .= $socket->read(limit: SocketFileMessageHandler::CHUNK_SIZE);
-            }
+            $header = readExactly($socket, 6);
+            ['size' => $size, 'gzip' => $compressed] = \unpack('Vsize/vgzip', $header);
+            $data = readExactly($socket, $size);
 
             if ($compressed) {
                 $data = \gzinflate($data);
