@@ -9,6 +9,7 @@ use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\Console\StdoutHandler;
 use PHPStreamServer\Core\Logger\ConsoleLogger;
 use PHPStreamServer\Core\Logger\LoggerInterface;
+use PHPStreamServer\Core\Message\RegisterWorkerCommand;
 use PHPStreamServer\Core\Message\ReloadServerCommand;
 use PHPStreamServer\Core\Message\StopServerCommand;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
@@ -49,11 +50,6 @@ final class MasterProcess
     private array $plugins = [];
 
     /**
-     * @var array<class-string<Process>, class-string<Plugin>>
-     */
-    private array $workerClassesCanNotBeHandled = [];
-
-    /**
      * @param array<Plugin> $plugins
      * @param array<Process> $workers
      */
@@ -61,7 +57,7 @@ final class MasterProcess
         private readonly string $pidFile,
         private readonly string $socketFile,
         array $plugins,
-        array $workers,
+        private array $workers,
     ) {
         if (!\in_array(PHP_SAPI, ['cli', 'phpdbg', 'micro'], true)) {
             throw new PHPStreamServerException('Can only run in CLI mode');
@@ -105,21 +101,7 @@ final class MasterProcess
             $plugin->register($this->masterContainer, $this->workerContainer, $this->status);
         }
 
-        // Init workers
-        foreach ($workers as $worker) {
-            foreach ($worker::handledBy() as $handledByPluginClass) {
-                if (!isset($this->plugins[$handledByPluginClass])) {
-                    $this->workerClassesCanNotBeHandled[$worker::class] = $handledByPluginClass;
-                    continue 2;
-                }
-            }
-
-            foreach ($worker::handledBy() as $handledByPluginClass) {
-                $this->plugins[$handledByPluginClass]->handleWorker($worker);
-            }
-        }
-
-        unset($plugins, $workers);
+        unset($plugins);
     }
 
     public function run(bool $daemonize): int
@@ -172,12 +154,9 @@ final class MasterProcess
 
         $this->masterContainer->setParameter('pid', \posix_getpid());
 
-        $stopCallback = function (): void {
-            $this->stop();
-        };
-        $reloadCallback = function (): void {
-            $this->reload();
-        };
+        $stopCallback = fn(): null => $this->stop();
+        $reloadCallback = fn(): null => $this->reload();
+
         EventLoop::onSignal(SIGINT, $stopCallback);
         EventLoop::onSignal(SIGTERM, $stopCallback);
         EventLoop::onSignal(SIGHUP, $stopCallback);
@@ -192,40 +171,68 @@ final class MasterProcess
             \clearstatcache();
         });
 
+        ErrorHandler::register($this->logger);
+        EventLoop::setErrorHandler(ErrorHandler::handleException(...));
+
+        EventLoop::queue(function () {
+            $this->registerWorker(...$this->workers);
+            unset($this->workers);
+        });
+
         foreach ($this->plugins as $plugin) {
-            EventLoop::defer(static function () use ($plugin) {
+            EventLoop::queue(static function () use ($plugin) {
                 $plugin->onStart();
             });
         }
 
         EventLoop::defer(function (): void {
-            ErrorHandler::register($this->logger);
-            EventLoop::setErrorHandler(ErrorHandler::handleException(...));
-
-            $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $message): void {
-                $this->stop($message->code);
+            $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $command): void {
+                $this->stop($command->code);
             });
 
-            $this->messageHandler->subscribe(ReloadServerCommand::class, function (): void {
+            $this->messageHandler->subscribe(ReloadServerCommand::class, function (ReloadServerCommand $command): void {
                 $this->reload();
             });
 
-            $this->logger->info(Server::NAME . ' has started');
+            $this->messageHandler->subscribe(RegisterWorkerCommand::class, function (RegisterWorkerCommand $command): int {
+                $this->registerWorker($command->workerProcess);
 
-            foreach ($this->workerClassesCanNotBeHandled as $workerClass => $handledByClass) {
-                $this->logger->error(\sprintf('"%s" process cannot be handled. Register the "%s" plugin', $workerClass, $handledByClass));
+                /** @psalm-suppress NoInterfaceProperties */
+                return $command->workerProcess->id ?? 0;
+            });
+
+            foreach ($this->plugins as $plugin) {
+                EventLoop::queue(static function () use ($plugin): void {
+                    $plugin->afterStart();
+                });
             }
 
-            unset($this->workerClassesCanNotBeHandled);
+            $this->status = Status::RUNNING;
+            $this->logger->info(Server::NAME . ' has started');
         });
+    }
 
-        foreach ($this->plugins as $plugin) {
-            EventLoop::defer(static function () use ($plugin): void {
-                $plugin->afterStart();
-            });
+    private function registerWorker(Process ...$workers): void
+    {
+        /** @var array<class-string<Process>, class-string<Plugin>> $canNotBeRegistered */
+        $canNotBeRegistered = [];
+
+        foreach ($workers as $worker) {
+            foreach ($worker::handledBy() as $handledByPluginClass) {
+                if (!isset($this->plugins[$handledByPluginClass])) {
+                    $canNotBeRegistered[$worker::class] = $handledByPluginClass;
+                    continue 2;
+                }
+            }
+
+            foreach ($worker::handledBy() as $handledByPluginClass) {
+                $this->plugins[$handledByPluginClass]->registerWorker($worker);
+            }
         }
 
-        $this->status = Status::RUNNING;
+        foreach ($canNotBeRegistered as $workerClass => $handledByClass) {
+            $this->logger->error(\sprintf('"%s" process cannot be procesed. Register the "%s" plugin', $workerClass, $handledByClass));
+        }
     }
 
     /**
@@ -307,6 +314,7 @@ final class MasterProcess
         }
     }
 
+    // After forking process we need to free resources in child process to get rid of all master process artifacts
     private function free(): void
     {
         $identifiers = EventLoop::getDriver()->getIdentifiers();

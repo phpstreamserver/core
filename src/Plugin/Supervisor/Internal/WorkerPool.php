@@ -8,6 +8,8 @@ use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Worker\WorkerProcess;
 use Revolt\EventLoop;
 
+use function PHPStreamServer\Core\generateWorkerId;
+
 /**
  * @internal
  */
@@ -30,22 +32,48 @@ final class WorkerPool
     {
     }
 
-    public function registerWorker(WorkerProcess $process): void
+    public function registerWorker(WorkerProcess $worker): void
     {
-        $this->workerPool[$process->id] = $process;
-        $this->processStatusMap[$process->id] = [];
-    }
-
-    public function addChild(WorkerProcess $process, int $pid): void
-    {
-        if (!isset($this->workerPool[$process->id])) {
-            throw new PHPStreamServerException('Worker not found in the pool');
+        /** @psalm-suppress RedundantCondition */
+        if (isset($worker->id)) {
+            throw new PHPStreamServerException('Worker already registered in the pool');
         }
 
-        $this->processStatusMap[$process->id][$pid] = new ProcessStatus($pid, $process->reloadable);
+        $workerId = generateWorkerId();
+
+        /**
+         * Assign unique sequential id and name if not set
+         * @psalm-suppress PossiblyNullFunctionCall, UndefinedThisPropertyFetch, UndefinedThisPropertyAssignment
+         */
+        \Closure::bind(function () use ($workerId): void {
+            $this->id = $workerId;
+            $this->name ??= 'worker ' . $this->id;
+        }, $worker, $worker)();
+
+        $this->workerPool[$workerId] = $worker;
+        $this->processStatusMap[$workerId] = [];
     }
 
-    public function markAsDeleted(int $pid): void
+    public function unregisterWorker(WorkerProcess $worker): void
+    {
+        if (!isset($this->workerPool[$worker->id])) {
+            throw new PHPStreamServerException('Worker not registered in the pool');
+        }
+
+        unset($this->workerPool[$worker->id]);
+        unset($this->processStatusMap[$worker->id]);
+    }
+
+    public function addChild(WorkerProcess $worker, int $pid): void
+    {
+        if (!isset($this->workerPool[$worker->id])) {
+            throw new PHPStreamServerException('Worker not registered in the pool');
+        }
+
+        $this->processStatusMap[$worker->id][$pid] = new ProcessStatus($pid, $worker->reloadable);
+    }
+
+    public function removeChild(int $pid): void
     {
         if (null !== $worker = $this->getWorkerByPid($pid)) {
             unset($this->processStatusMap[$worker->id][$pid]);
@@ -100,17 +128,17 @@ final class WorkerPool
     }
 
     /**
-     * @return \Iterator<int>
+     * @return array<int>
      */
-    public function getAliveWorkerPids(WorkerProcess $process): \Iterator
+    public function getWorkerPids(WorkerProcess $worker): array
     {
-        return new \ArrayIterator(\array_keys($this->processStatusMap[$process->id] ?? []));
+        return \array_keys($this->processStatusMap[$worker->id] ?? []);
     }
 
     /**
      * @return \Iterator<WorkerProcess, ProcessStatus>
      */
-    public function getProcesses(): \Iterator
+    public function getProcessesStatuses(): \Iterator
     {
         foreach ($this->processStatusMap as $workerId => $processes) {
             foreach ($processes as $process) {
@@ -126,6 +154,6 @@ final class WorkerPool
 
     public function getProcessesCount(): int
     {
-        return \iterator_count($this->getProcesses());
+        return \iterator_count($this->getProcessesStatuses());
     }
 }

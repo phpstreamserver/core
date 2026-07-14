@@ -20,6 +20,7 @@
         "amphp/amp": "^3.0",
         "amphp/byte-stream": "^2.1",
         "amphp/socket": "^2.3",
+        "opis/closure": "^4.5",
         "psr/container": "^2.0",
         "psr/log": "^3.0",
         "revolt/event-loop": "^1.0"

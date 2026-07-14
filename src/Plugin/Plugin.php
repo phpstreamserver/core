@@ -36,9 +36,9 @@ abstract class Plugin
     }
 
     /**
-     * Handles a worker to be configured by the plugin
+     * Register a worker in the plugin
      */
-    public function handleWorker(Process $worker): void
+    public function registerWorker(Process $worker): void
     {
     }
 

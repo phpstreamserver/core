@@ -40,7 +40,7 @@ final class SupervisorPlugin extends Plugin
         $this->masterContainer->setService(SupervisorStatus::class, $this->supervisorStatus);
     }
 
-    public function handleWorker(Process $worker): void
+    public function registerWorker(Process $worker): void
     {
         \assert($worker instanceof WorkerProcess);
         $this->supervisor->addWorker($worker);

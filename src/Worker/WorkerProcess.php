@@ -6,6 +6,7 @@ namespace PHPStreamServer\Core\Worker;
 
 use Amp\DeferredFuture;
 use PHPStreamServer\Core\ContainerInterface;
+use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Exception\UserChangeException;
 use PHPStreamServer\Core\Internal\ErrorHandler;
 use PHPStreamServer\Core\Internal\ProcessUserChange;
@@ -79,12 +80,12 @@ class WorkerProcess implements Process
         \Closure|null $onReload = null,
         private array $reloadStrategies = [],
     ) {
-        static $nextId = 0;
-        $this->id = ++$nextId;
+        if ($count < 1 || $count > 1024) {
+            throw new PHPStreamServerException('Count must be between 1 and 1024');
+        }
 
-        if ($name === '') {
-            $this->name = 'worker_' . $this->id;
-        } else {
+        $name = \trim($name);
+        if ($name !== '') {
             $this->name = $name;
         }
 

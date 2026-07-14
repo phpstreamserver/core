@@ -8,9 +8,9 @@ use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Exception\ServerIsRunning;
 use PHPStreamServer\Core\Internal\MasterProcess;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\WorkerInfo;
+use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\Worker\WorkerProcess;
 
 use function PHPStreamServer\Core\getDriverName;
 use function PHPStreamServer\Core\isRunning;
@@ -48,12 +48,11 @@ class StartCommand extends Command
         );
 
         /**
-         * @var SupervisorStatus $supervisorStatus
+         * @var array<WorkerProcess> $workers
          * @psalm-suppress UndefinedThisPropertyFetch, PossiblyNullFunctionCall
          */
-        $supervisorStatus = (function (): SupervisorStatus {
-            return $this->masterContainer->getService(SupervisorStatus::class);
-        })->bindTo($masterProcess, $masterProcess)();
+        $workers = (fn(): array => $this->workers)->bindTo($masterProcess, $masterProcess)();
+        $workers = \array_filter(array: $workers, callback: static fn(Process $worker) => $worker instanceof WorkerProcess);
 
         $eventLoop = getDriverName();
 
@@ -64,26 +63,26 @@ class StartCommand extends Command
                 [Server::NAME . ' version:', Server::getVersion()],
                 ['PHP version:', PHP_VERSION],
                 ['Event loop driver:', $eventLoop],
-                ['Workers count:', $supervisorStatus->getWorkersCount()],
+                ['Workers count:', \count($workers)],
             ])
         ;
 
         echo "❯ Workers\n";
 
-        if ($supervisorStatus->getWorkersCount() > 0) {
+        if (\count($workers) > 0) {
             echo (new Table(indent: 1))
                 ->setHeaderRow([
                     'User',
                     'Worker',
                     'Count',
                 ])
-                ->addRows(\array_map(static function (WorkerInfo $w): array {
+                ->addRows(\array_map(static function (WorkerProcess $w): array {
                     return [
-                        $w->user,
+                        $w->getUser(),
                         $w->name,
                         $w->count,
                     ];
-                }, $supervisorStatus->getWorkers()))
+                }, $workers))
             ;
         } else {
             echo "  <color;bg=yellow> ! </> <color;fg=yellow>There are no workers</>\n";

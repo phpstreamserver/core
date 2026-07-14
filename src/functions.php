@@ -124,10 +124,17 @@ function getCpuCount(): int
     }
 }
 
+function generateWorkerId(): int
+{
+    static $nextWorkerId = 1;
+    return $nextWorkerId++;
+}
+
 function readExactly(Socket $socket, int $length): string
 {
     $data = '';
     while (\strlen($data) < $length) {
+        /** @psalm-suppress InvalidArgument */
         $chunk = $socket->read(limit: $length - \strlen($data));
         if ($chunk === null) {
             throw new SocketException(\sprintf('Socket closed after receiving %d of %d expected bytes', \strlen($data), $length));
