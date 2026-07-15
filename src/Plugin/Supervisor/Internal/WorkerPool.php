@@ -8,8 +8,6 @@ use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Worker\WorkerProcess;
 use Revolt\EventLoop;
 
-use function PHPStreamServer\Core\generateWorkerId;
-
 /**
  * @internal
  */
@@ -34,24 +32,8 @@ final class WorkerPool
 
     public function registerWorker(WorkerProcess $worker): void
     {
-        /** @psalm-suppress RedundantCondition */
-        if (isset($worker->id)) {
-            throw new PHPStreamServerException('Worker already registered in the pool');
-        }
-
-        $workerId = generateWorkerId();
-
-        /**
-         * Assign unique sequential id and name if not set
-         * @psalm-suppress PossiblyNullFunctionCall, UndefinedThisPropertyFetch, UndefinedThisPropertyAssignment
-         */
-        \Closure::bind(function () use ($workerId): void {
-            $this->id = $workerId;
-            $this->name ??= 'worker ' . $this->id;
-        }, $worker, $worker)();
-
-        $this->workerPool[$workerId] = $worker;
-        $this->processStatusMap[$workerId] = [];
+        $this->workerPool[$worker->id] = $worker;
+        $this->processStatusMap[$worker->id] = [];
     }
 
     public function unregisterWorker(WorkerProcess $worker): void

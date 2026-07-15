@@ -43,7 +43,7 @@ final class SupervisorPlugin extends Plugin
     public function registerWorker(Process $worker): void
     {
         \assert($worker instanceof WorkerProcess);
-        $this->supervisor->addWorker($worker);
+        $this->supervisor->registerWorker($worker);
         $this->supervisorStatus->addWorker($worker);
     }
 

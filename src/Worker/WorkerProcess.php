@@ -104,6 +104,20 @@ class WorkerProcess implements Process
 
     /**
      * @internal
+     * @psalm-suppress RedundantPropertyInitializationCheck
+     */
+    final public function assignId(int $id): void
+    {
+        if (isset($this->id)) {
+            throw new PHPStreamServerException('Worker id has already been assigned');
+        }
+
+        $this->id = $id;
+        $this->name ??= 'worker ' . $id;
+    }
+
+    /**
+     * @internal
      */
     final public function run(ContainerInterface $workerContainer): int
     {
