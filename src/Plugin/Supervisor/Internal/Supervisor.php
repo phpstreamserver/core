@@ -9,12 +9,14 @@ use Amp\Future;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\SIGCHLDHandler;
 use PHPStreamServer\Core\Internal\Status;
+use PHPStreamServer\Core\Message\GetSupervisorStatusCommand;
 use PHPStreamServer\Core\Message\ProcessBlockedEvent;
 use PHPStreamServer\Core\Message\ProcessDetachedEvent;
 use PHPStreamServer\Core\Message\ProcessExitEvent;
 use PHPStreamServer\Core\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
+use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Worker\WorkerProcess;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
@@ -28,19 +30,21 @@ use function PHPStreamServer\Core\generateWorkerId;
 final class Supervisor
 {
     private bool $running = false;
-    public MessageHandlerInterface $messageHandler;
-    public MessageBusInterface $messageBus;
-    private WorkerPool $pool;
     private LoggerInterface $logger;
+    public MessageBusInterface $messageBus;
+    public MessageHandlerInterface $messageHandler;
+    private WorkerPool $pool;
+    public readonly SupervisorStatus $supervisorStatus;
     private Suspension $suspension;
     private DeferredFuture $stopFuture;
 
     public function __construct(
-        private Status &$status,
+        private Status &$serverStatus,
         private readonly int $stopTimeout,
         private readonly float $restartDelay,
     ) {
         $this->pool = new WorkerPool();
+        $this->supervisorStatus = new SupervisorStatus();
     }
 
     public function registerWorker(WorkerProcess $worker): void
@@ -49,6 +53,7 @@ final class Supervisor
         $worker->assignId($workerId);
 
         $this->pool->registerWorker($worker);
+        $this->supervisorStatus->addWorker($worker);
 
         if ($this->running) {
             $this->logger->info(\sprintf('Worker "%s" was registered in supervisor with %d processes', $worker->name, $worker->count));
@@ -56,27 +61,32 @@ final class Supervisor
         }
     }
 
-    public function start(Suspension $suspension, LoggerInterface &$logger, MessageHandlerInterface &$messageHandler, MessageBusInterface &$messageBus): void
+    public function start(Suspension $suspension, LoggerInterface &$logger, MessageBusInterface &$messageBus, MessageHandlerInterface &$messageHandler): void
     {
         $this->running = true;
         $this->suspension = $suspension;
         $this->logger = &$logger;
-        $this->messageHandler = &$messageHandler;
         $this->messageBus = &$messageBus;
+        $this->messageHandler = &$messageHandler;
 
         SIGCHLDHandler::onChildProcessExit($this->onProcessStop(...));
-
         EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $this->monitorWorkerStatus(...));
 
-        $workerPool = $this->pool;
-        EventLoop::defer(static function () use ($workerPool, &$messageHandler): void {
-            $messageHandler->subscribe(ProcessDetachedEvent::class, static function (ProcessDetachedEvent $message) use ($workerPool): void {
-                $workerPool->markAsDetached($message->pid);
-            });
+        $this->supervisorStatus->subscribeToWorkerMessages($this->messageHandler);
 
-            $messageHandler->subscribe(ProcessHeartbeatEvent::class, static function (ProcessHeartbeatEvent $message) use ($workerPool): void {
-                $workerPool->markAsHealthy($message->pid, $message->time);
-            });
+        $workerPool = $this->pool;
+        $supervisorStatus = $this->supervisorStatus;
+
+        $this->messageHandler->subscribe(ProcessDetachedEvent::class, static function (ProcessDetachedEvent $message) use ($workerPool): void {
+            $workerPool->markAsDetached($message->pid);
+        });
+
+        $this->messageHandler->subscribe(ProcessHeartbeatEvent::class, static function (ProcessHeartbeatEvent $message) use ($workerPool): void {
+            $workerPool->markAsHealthy($message->pid, $message->time);
+        });
+
+        $this->messageHandler->subscribe(GetSupervisorStatusCommand::class, static function () use ($supervisorStatus): SupervisorStatus {
+            return $supervisorStatus;
         });
 
         $this->startAllWorkersProcesses();
@@ -160,7 +170,7 @@ final class Supervisor
             $messageBus->dispatch(new ProcessExitEvent($pid, $exitCode));
         });
 
-        if ($this->status === Status::RUNNING) {
+        if ($this->serverStatus === Status::RUNNING) {
             if ($exitCode === 0) {
                 $this->logger->info(\sprintf('Worker "%s"[pid:%d] exited with code %s', $worker->name, $pid, $exitCode));
             } elseif ($exitCode === $worker::RELOAD_EXIT_CODE && $worker->reloadable) {

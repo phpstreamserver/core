@@ -8,7 +8,6 @@ use Amp\Future;
 use PHPStreamServer\Core\Command\ProcessesCommand;
 use PHPStreamServer\Core\Exception\ServiceNotFoundException;
 use PHPStreamServer\Core\Logger\LoggerInterface;
-use PHPStreamServer\Core\Message\GetSupervisorStatusCommand;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
@@ -22,7 +21,6 @@ use Revolt\EventLoop\Suspension;
 
 final class SupervisorPlugin extends Plugin
 {
-    private SupervisorStatus $supervisorStatus;
     private Supervisor $supervisor;
     private MessageHandlerInterface $handler;
 
@@ -36,15 +34,13 @@ final class SupervisorPlugin extends Plugin
         /** @var int $stopTimeout */
         $stopTimeout = $this->masterContainer->getParameter('stop_timeout');
         $this->supervisor = new Supervisor($this->status, $stopTimeout, $this->restartDelay);
-        $this->supervisorStatus = new SupervisorStatus();
-        $this->masterContainer->setService(SupervisorStatus::class, $this->supervisorStatus);
+        $this->masterContainer->setService(SupervisorStatus::class, $this->supervisor->supervisorStatus);
     }
 
     public function registerWorker(Process $worker): void
     {
         \assert($worker instanceof WorkerProcess);
         $this->supervisor->registerWorker($worker);
-        $this->supervisorStatus->addWorker($worker);
     }
 
     public function onStart(): void
@@ -53,16 +49,10 @@ final class SupervisorPlugin extends Plugin
         $suspension = $this->masterContainer->getService('main_suspension');
         /** @var LoggerInterface $logger */
         $logger = &$this->masterContainer->getService(LoggerInterface::class);
-        $this->handler = &$this->masterContainer->getService(MessageHandlerInterface::class);
         $bus = &$this->masterContainer->getService(MessageBusInterface::class);
+        $this->handler = &$this->masterContainer->getService(MessageHandlerInterface::class);
 
-        $this->supervisorStatus->subscribeToWorkerMessages($this->handler);
-        $this->supervisor->start($suspension, $logger, $this->handler, $bus);
-
-        $supervisorStatus = $this->supervisorStatus;
-        $this->handler->subscribe(GetSupervisorStatusCommand::class, static function () use ($supervisorStatus): SupervisorStatus {
-            return $supervisorStatus;
-        });
+        $this->supervisor->start($suspension, $logger, $bus, $this->handler);
     }
 
     public function afterStart(): void
@@ -70,7 +60,7 @@ final class SupervisorPlugin extends Plugin
         if (\interface_exists(RegistryInterface::class)) {
             try {
                 $registry = $this->masterContainer->getService(RegistryInterface::class);
-                $this->masterContainer->setService(MetricsHandler::class, new MetricsHandler($registry, $this->supervisorStatus, $this->handler));
+                $this->masterContainer->setService(MetricsHandler::class, new MetricsHandler($registry, $this->supervisor->supervisorStatus, $this->handler));
             } catch (ServiceNotFoundException) {
                 // no action
             }
