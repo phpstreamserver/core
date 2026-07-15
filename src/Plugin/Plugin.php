@@ -10,6 +10,9 @@ use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Internal\Status;
 use PHPStreamServer\Core\Process;
 
+/**
+ * @template T of Process
+ */
 abstract class Plugin
 {
     protected readonly ContainerInterface $masterContainer;
@@ -27,7 +30,7 @@ abstract class Plugin
     /**
      * @internal
      */
-    final public function register(ContainerInterface $masterContainer, ContainerInterface $workerContainer, Status &$status): void
+    final public function init(ContainerInterface $masterContainer, ContainerInterface $workerContainer, Status &$status): void
     {
         $this->masterContainer = $masterContainer;
         $this->workerContainer = $workerContainer;
@@ -37,6 +40,7 @@ abstract class Plugin
 
     /**
      * Register a worker in the plugin
+     * @param T $worker
      */
     public function registerWorker(Process $worker): void
     {

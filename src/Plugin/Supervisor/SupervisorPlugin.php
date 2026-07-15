@@ -19,6 +19,9 @@ use PHPStreamServer\Core\Worker\WorkerProcess;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
 use Revolt\EventLoop\Suspension;
 
+/**
+ * @extends Plugin<WorkerProcess>
+ */
 final class SupervisorPlugin extends Plugin
 {
     private Supervisor $supervisor;
@@ -39,7 +42,6 @@ final class SupervisorPlugin extends Plugin
 
     public function registerWorker(Process $worker): void
     {
-        \assert($worker instanceof WorkerProcess);
         $this->supervisor->registerWorker($worker);
     }
 

@@ -98,7 +98,7 @@ final class MasterProcess
                 throw new PHPStreamServerException(\sprintf('Plugin "%s" is already registered', $plugin::class));
             }
             $this->plugins[$plugin::class] = $plugin;
-            $plugin->register($this->masterContainer, $this->workerContainer, $this->status);
+            $plugin->init($this->masterContainer, $this->workerContainer, $this->status);
         }
 
         unset($plugins);

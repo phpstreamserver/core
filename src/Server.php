@@ -35,6 +35,10 @@ final class Server
         $this->addPlugin(new SupervisorPlugin(restartDelay: $restartDelay ?? 0.25));
     }
 
+    /**
+     * @template T of Process
+     * @param Plugin<T> ...$plugins
+     */
     public function addPlugin(Plugin ...$plugins): self
     {
         \array_push($this->plugins, ...$plugins);

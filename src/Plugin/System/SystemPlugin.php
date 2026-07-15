@@ -16,9 +16,11 @@ use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
 use PHPStreamServer\Core\Plugin\System\Status\ServerStatus;
+use PHPStreamServer\Core\Process;
 
 /**
  * @internal
+ * @extends Plugin<Process>
  */
 final class SystemPlugin extends Plugin
 {
