@@ -98,6 +98,11 @@ final class SupervisorStatus
         );
     }
 
+    public function removeWorker(WorkerProcess $worker): void
+    {
+        unset($this->workers[$worker->id]);
+    }
+
     public function getWorkersCount(): int
     {
         return \count($this->workers);

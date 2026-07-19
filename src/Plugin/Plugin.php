@@ -39,7 +39,8 @@ abstract class Plugin
     }
 
     /**
-     * Register a worker in the plugin
+     * Registers a worker.
+     *
      * @param T $worker
      */
     public function registerWorker(Process $worker): void
@@ -47,28 +48,35 @@ abstract class Plugin
     }
 
     /**
-     * Called before the server starts
+     * Unregisters a worker if registered.
+     */
+    public function unRegisterWorker(int $workerId): void
+    {
+    }
+
+    /**
+     * Runs when the plugin is initialized.
      */
     protected function beforeStart(): void
     {
     }
 
     /**
-     * Called during server startup
+     * Runs during server startup.
      */
     public function onStart(): void
     {
     }
 
     /**
-     * Called after the server has started
+     * Runs after server startup.
      */
     public function afterStart(): void
     {
     }
 
     /**
-     * Called after the master process receives a stop command
+     * Runs during server shutdown.
      */
     public function onStop(): Future
     {
@@ -76,14 +84,14 @@ abstract class Plugin
     }
 
     /**
-     * Called after the master process receives a reload command
+     * Runs when the server reloads.
      */
     public function onReload(): void
     {
     }
 
     /**
-     * Registers commands provided by the plugin
+     * Returns the plugin's CLI commands.
      *
      * @return iterable<Command>
      */

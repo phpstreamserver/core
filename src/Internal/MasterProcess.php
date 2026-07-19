@@ -12,6 +12,7 @@ use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\Message\RegisterWorkerCommand;
 use PHPStreamServer\Core\Message\ReloadServerCommand;
 use PHPStreamServer\Core\Message\StopServerCommand;
+use PHPStreamServer\Core\Message\UnRegisterWorkerCommand;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
@@ -100,7 +101,6 @@ final class MasterProcess
             $this->plugins[$plugin::class] = $plugin;
             $plugin->init($this->masterContainer, $this->workerContainer, $this->status);
         }
-
         unset($plugins);
     }
 
@@ -174,10 +174,8 @@ final class MasterProcess
         ErrorHandler::register($this->logger);
         EventLoop::setErrorHandler(ErrorHandler::handleException(...));
 
-        EventLoop::queue(function () {
-            $this->registerWorker(...$this->workers);
-            unset($this->workers);
-        });
+        $this->registerWorker(...$this->workers);
+        unset($this->workers);
 
         foreach ($this->plugins as $plugin) {
             EventLoop::queue(static function () use ($plugin) {
@@ -199,6 +197,10 @@ final class MasterProcess
 
                 /** @psalm-suppress NoInterfaceProperties */
                 return $command->workerProcess->id ?? 0;
+            });
+
+            $this->messageHandler->subscribe(UnRegisterWorkerCommand::class, function (UnRegisterWorkerCommand $command): void {
+                $this->unRegisterWorker($command->workerId);
             });
 
             foreach ($this->plugins as $plugin) {
@@ -232,6 +234,13 @@ final class MasterProcess
 
         foreach ($canNotBeRegistered as $workerClass => $handledByClass) {
             $this->logger->error(\sprintf('"%s" process cannot be procesed. Register the "%s" plugin', $workerClass, $handledByClass));
+        }
+    }
+
+    private function unRegisterWorker(int $workerId): void
+    {
+        foreach ($this->plugins as $plugin) {
+            $plugin->unRegisterWorker($workerId);
         }
     }
 

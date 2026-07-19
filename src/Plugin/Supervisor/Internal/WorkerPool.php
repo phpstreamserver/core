@@ -26,6 +26,11 @@ final class WorkerPool
      */
     private array $processStatusMap = [];
 
+    /**
+     * @var array<int, true>
+     */
+    private array $workersToUnload = [];
+
     public function __construct()
     {
     }
@@ -36,20 +41,19 @@ final class WorkerPool
         $this->processStatusMap[$worker->id] = [];
     }
 
-    public function unregisterWorker(WorkerProcess $worker): void
+    public function unregisterWorker(int $workerId): void
     {
-        if (!isset($this->workerPool[$worker->id])) {
-            throw new PHPStreamServerException('Worker not registered in the pool');
+        if (!isset($this->workerPool[$workerId])) {
+            throw new PHPStreamServerException('Worker is not registered in the pool');
         }
 
-        unset($this->workerPool[$worker->id]);
-        unset($this->processStatusMap[$worker->id]);
+        $this->workersToUnload[$workerId] = true;
     }
 
-    public function addChild(WorkerProcess $worker, int $pid): void
+    public function addChild(int $workerId, int $pid): void
     {
-        if (!isset($this->workerPool[$worker->id])) {
-            throw new PHPStreamServerException('Worker not registered in the pool');
+        if (null === $worker = $this->getWorkerById($workerId)) {
+            throw new PHPStreamServerException('Worker is not registered in the pool');
         }
 
         $this->processStatusMap[$worker->id][$pid] = new ProcessStatus($pid, $worker->reloadable);
@@ -57,9 +61,22 @@ final class WorkerPool
 
     public function removeChild(int $pid): void
     {
-        if (null !== $worker = $this->getWorkerByPid($pid)) {
-            unset($this->processStatusMap[$worker->id][$pid]);
+        if (null === $worker = $this->getWorkerByPid($pid)) {
+            return;
         }
+
+        unset($this->processStatusMap[$worker->id][$pid]);
+
+        if ($this->isUnloading($worker->id) && \count($this->getWorkerPids($worker->id)) === 0) {
+            unset($this->workersToUnload[$worker->id]);
+            unset($this->workerPool[$worker->id]);
+            unset($this->processStatusMap[$worker->id]);
+        }
+    }
+
+    public function isUnloading(int $workerId): bool
+    {
+        return \array_key_exists($workerId, $this->workersToUnload);
     }
 
     public function markAsDetached(int $pid): void
@@ -90,6 +107,11 @@ final class WorkerPool
         }
     }
 
+    public function getWorkerById(int $id): WorkerProcess|null
+    {
+        return $this->workerPool[$id] ?? null;
+    }
+
     public function getWorkerByPid(int $pid): WorkerProcess|null
     {
         foreach ($this->processStatusMap as $workerId => $processes) {
@@ -112,15 +134,15 @@ final class WorkerPool
     /**
      * @return array<int>
      */
-    public function getWorkerPids(WorkerProcess $worker): array
+    public function getWorkerPids(int $workerId): array
     {
-        return \array_keys($this->processStatusMap[$worker->id] ?? []);
+        return \array_keys($this->processStatusMap[$workerId] ?? []);
     }
 
     /**
      * @return \Iterator<WorkerProcess, ProcessStatus>
      */
-    public function getProcessesStatuses(): \Iterator
+    public function getAllProcessStatuses(): \Iterator
     {
         foreach ($this->processStatusMap as $workerId => $processes) {
             foreach ($processes as $process) {
@@ -136,6 +158,6 @@ final class WorkerPool
 
     public function getProcessesCount(): int
     {
-        return \iterator_count($this->getProcessesStatuses());
+        return \iterator_count($this->getAllProcessStatuses());
     }
 }

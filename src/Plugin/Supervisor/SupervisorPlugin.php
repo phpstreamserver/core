@@ -45,6 +45,11 @@ final class SupervisorPlugin extends Plugin
         $this->supervisor->registerWorker($worker);
     }
 
+    public function unRegisterWorker(int $workerId): void
+    {
+        $this->supervisor->unRegisterWorker($workerId);
+    }
+
     public function onStart(): void
     {
         /** @var Suspension $suspension */

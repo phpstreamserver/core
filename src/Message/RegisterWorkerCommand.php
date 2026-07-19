@@ -13,7 +13,8 @@ use function Opis\Closure\serialize as opisSerialize;
 use function Opis\Closure\unserialize as opisUnserialize;
 
 /**
- * Register and start new Process. Returns unique worker id.
+ * Register and start new Worker. Returns unique worker id.
+ *
  * @implements MessageInterface<int>
  */
 final readonly class RegisterWorkerCommand implements MessageInterface
