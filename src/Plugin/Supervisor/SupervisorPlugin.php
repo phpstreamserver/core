@@ -13,7 +13,6 @@ use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\MetricsHandler;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\Supervisor;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Worker\WorkerProcess;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
@@ -37,7 +36,6 @@ final class SupervisorPlugin extends Plugin
         /** @var int $stopTimeout */
         $stopTimeout = $this->masterContainer->getParameter('stop_timeout');
         $this->supervisor = new Supervisor($this->status, $stopTimeout, $this->restartDelay);
-        $this->masterContainer->setService(SupervisorStatus::class, $this->supervisor->supervisorStatus);
     }
 
     public function registerWorker(Process $worker): void
@@ -47,7 +45,7 @@ final class SupervisorPlugin extends Plugin
 
     public function unRegisterWorker(int $workerId): void
     {
-        $this->supervisor->unRegisterWorker($workerId);
+        $this->supervisor->unregisterWorker($workerId);
     }
 
     public function onStart(): void
@@ -67,7 +65,7 @@ final class SupervisorPlugin extends Plugin
         if (\interface_exists(RegistryInterface::class)) {
             try {
                 $registry = $this->masterContainer->getService(RegistryInterface::class);
-                $this->masterContainer->setService(MetricsHandler::class, new MetricsHandler($registry, $this->supervisor->supervisorStatus, $this->handler));
+                $this->masterContainer->setService(MetricsHandler::class, new MetricsHandler($registry, $this->supervisor->pool, $this->handler));
             } catch (ServiceNotFoundException) {
                 // no action
             }

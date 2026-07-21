@@ -6,10 +6,9 @@ namespace PHPStreamServer\Core\Command;
 
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
-use PHPStreamServer\Core\Message\GetSupervisorStatusCommand;
+use PHPStreamServer\Core\Message\GetWorkersCommand;
 use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\WorkerInfo;
+use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;
 
 class WorkersCommand extends Command
 {
@@ -27,9 +26,7 @@ class WorkersCommand extends Command
     {
         $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
 
-        $supervisorStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
-        \assert($supervisorStatus instanceof SupervisorStatus);
-        $workers = $supervisorStatus->getWorkers();
+        $workers = $bus->dispatch(new GetWorkersCommand())->await();
 
         echo "❯ Workers\n";
 
@@ -43,7 +40,7 @@ class WorkersCommand extends Command
                 ->addRows(\array_map(array: $workers, callback: static fn(WorkerInfo $w) => [
                     $w->user === 'root' ? $w->user : "<color;fg=gray>{$w->user}</>",
                     $w->name,
-                    $w->count,
+                    $w->processCount,
                 ]));
         } else {
             echo "  <color;bg=yellow> ! </> <color;fg=yellow>There are no workers</>\n";

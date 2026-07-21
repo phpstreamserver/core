@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Plugin\Supervisor\Status;
+namespace PHPStreamServer\Core\Plugin\Supervisor;
 
 final class ProcessInfo
 {
@@ -12,6 +12,7 @@ final class ProcessInfo
         public string $user,
         public string $name,
         public \DateTimeImmutable $startedAt,
+        public int $heartbeatTime,
         public int $memory = 0,
         public bool $detached = false,
         public bool $blocked = false,

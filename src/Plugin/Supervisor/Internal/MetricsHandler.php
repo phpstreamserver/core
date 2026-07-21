@@ -6,7 +6,6 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
 use PHPStreamServer\Core\Message\ProcessExitEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Worker\WorkerProcess;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
@@ -16,7 +15,7 @@ final readonly class MetricsHandler
 {
     public function __construct(
         RegistryInterface $registry,
-        SupervisorStatus $supervisorStatus,
+        WorkerPool $pool,
         MessageHandlerInterface $handler,
     ) {
         $workersTotal = $registry->registerGauge(
@@ -59,16 +58,19 @@ final readonly class MetricsHandler
             }
         });
 
-        $workersTotal->set($supervisorStatus->getWorkersCount());
+        $heartBeat = static function () use ($pool, $workersTotal, $processesTotal, $memoryBytes): void {
+            $workers = $pool->getWorkerInfos();
+            $processes = $pool->getProcessInfos();
 
-        $heartBeat = static function () use ($processesTotal, $supervisorStatus, $memoryBytes): void {
-            $processesTotal->set($supervisorStatus->getProcessesCount());
-            foreach ($supervisorStatus->getProcesses() as $process) {
+            $workersTotal->set(\count($workers));
+            $processesTotal->set(\count($processes));
+
+            foreach ($processes as $process) {
                 $memoryBytes->set($process->memory, ['pid' => (string) $process->pid]);
             }
         };
 
-        EventLoop::delay(0.3, $heartBeat);
-        EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $heartBeat);
+        EventLoop::unreference(EventLoop::delay(0.3, $heartBeat));
+        EventLoop::unreference(EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $heartBeat));
     }
 }

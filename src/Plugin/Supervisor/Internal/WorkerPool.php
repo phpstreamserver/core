@@ -5,130 +5,202 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
+use PHPStreamServer\Core\Message\ProcessBlockedEvent;
+use PHPStreamServer\Core\Message\ProcessDetachedEvent;
+use PHPStreamServer\Core\Message\ProcessHeartbeatEvent;
+use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
+use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
+use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;
 use PHPStreamServer\Core\Worker\WorkerProcess;
 use Revolt\EventLoop;
+
+use function PHPStreamServer\Core\getMemoryUsageByPid;
 
 /**
  * @internal
  */
 final class WorkerPool
 {
-    private const BLOCKED_LABEL_PERSISTENCE = 30;
-    public const BLOCK_WARNING_TRESHOLD = 6;
+    private const BLOCKED_LABEL_RESET_DELAY_SECONDS = 30;
+    public const BLOCK_WARNING_THRESHOLD_SECONDS = 6;
 
     /**
      * @var array<int, WorkerProcess>
      */
-    private array $workerPool = [];
+    private array $workersById = [];
 
     /**
-     * @var array<int, array<int, ProcessStatus>>
+     * @var array<int, WorkerInfo>
      */
-    private array $processStatusMap = [];
+    private array $workerInfosById = [];
 
     /**
-     * @var array<int, true>
+     * @var array<int, ProcessInfo>
      */
-    private array $workersToUnload = [];
+    private array $processInfosByPid = [];
 
     public function __construct()
     {
     }
 
-    public function registerWorker(WorkerProcess $worker): void
+    public function subscribeToEvents(MessageHandlerInterface $handler): void
     {
-        $this->workerPool[$worker->id] = $worker;
-        $this->processStatusMap[$worker->id] = [];
+        $processInfosByPid = &$this->processInfosByPid;
+
+        $handler->subscribe(ProcessHeartbeatEvent::class, static function (ProcessHeartbeatEvent $message) use (&$processInfosByPid): void {
+            if (!\array_key_exists($message->pid, $processInfosByPid) || $processInfosByPid[$message->pid]->detached === true) {
+                return;
+            }
+
+            $processInfosByPid[$message->pid]->heartbeatTime = $message->time;
+            $processInfosByPid[$message->pid]->memory = $message->memory;
+            $processInfosByPid[$message->pid]->blocked = false;
+        });
+
+        $handler->subscribe(ProcessBlockedEvent::class, static function (ProcessBlockedEvent $message) use (&$processInfosByPid): void {
+            if (!\array_key_exists($message->pid, $processInfosByPid) || $processInfosByPid[$message->pid]->detached === true) {
+                return;
+            }
+
+            $processInfosByPid[$message->pid]->blocked = true;
+
+            $pid = $message->pid;
+            EventLoop::unreference(EventLoop::delay(self::BLOCKED_LABEL_RESET_DELAY_SECONDS, static function () use (&$processInfosByPid, $pid): void {
+                if (\array_key_exists($pid, $processInfosByPid)) {
+                    $processInfosByPid[$pid]->blocked = false;
+                }
+            }));
+        });
+
+        $handler->subscribe(ProcessDetachedEvent::class, static function (ProcessDetachedEvent $message) use (&$processInfosByPid): void {
+            if (!\array_key_exists($message->pid, $processInfosByPid)) {
+                return;
+            }
+
+            $processInfosByPid[$message->pid]->detached = true;
+            $processInfosByPid[$message->pid]->blocked = false;
+
+            $pid = $message->pid;
+            $checkMemoryUsageClosure = static function (string $id) use (&$processInfosByPid, $pid): void {
+                if (\array_key_exists($pid, $processInfosByPid)) {
+                    $processInfosByPid[$pid]->memory = getMemoryUsageByPid($pid);
+                } else {
+                    EventLoop::cancel($id);
+                }
+            };
+
+            EventLoop::unreference(EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $checkMemoryUsageClosure));
+        });
     }
 
-    public function unregisterWorker(int $workerId): void
+    public function addWorker(WorkerProcess $worker): WorkerInfo
     {
-        if (!isset($this->workerPool[$workerId])) {
+        $this->workersById[$worker->id] = $worker;
+
+        $workerInfo = new WorkerInfo(
+            id: $worker->id,
+            name: $worker->getName(),
+            user: $worker->getUser(),
+            status: WorkerInfo::STATUS_STARTING,
+            processCount: $worker->count,
+            reloadable: $worker->reloadable,
+        );
+
+        $this->workerInfosById[$worker->id] = $workerInfo;
+
+        return $workerInfo;
+    }
+
+    public function removeWorker(int $workerId): void
+    {
+        if (null === $worker = $this->getWorkerInfoById($workerId)) {
             throw new PHPStreamServerException('Worker is not registered in the pool');
         }
 
-        $this->workersToUnload[$workerId] = true;
+        $worker->status = WorkerInfo::STATUS_STOPPING;
     }
 
-    public function addChild(int $workerId, int $pid): void
+    public function addProcess(int $workerId, int $pid): void
     {
-        if (null === $worker = $this->getWorkerById($workerId)) {
+        if (null === $worker = $this->getWorkerInfoById($workerId)) {
             throw new PHPStreamServerException('Worker is not registered in the pool');
         }
 
-        $this->processStatusMap[$worker->id][$pid] = new ProcessStatus($pid, $worker->reloadable);
+        $this->processInfosByPid[$pid] = new ProcessInfo(
+            workerId: $worker->id,
+            pid: $pid,
+            user: $worker->user,
+            name: $worker->name,
+            startedAt: new \DateTimeImmutable('now'),
+            heartbeatTime: \hrtime(true),
+            reloadable: $worker->reloadable,
+        );
+
+        if ($worker->status === WorkerInfo::STATUS_STARTING && \count($this->getWorkerPids($workerId)) === $worker->processCount) {
+            $worker->status = WorkerInfo::STATUS_RUNNING;
+        }
     }
 
-    public function removeChild(int $pid): void
+    public function removeProcess(int $pid): void
     {
-        if (null === $worker = $this->getWorkerByPid($pid)) {
+        if (null === $worker = $this->getWorkerInfoByPid($pid)) {
             return;
         }
 
-        unset($this->processStatusMap[$worker->id][$pid]);
+        unset($this->processInfosByPid[$pid]);
 
-        if ($this->isUnloading($worker->id) && \count($this->getWorkerPids($worker->id)) === 0) {
-            unset($this->workersToUnload[$worker->id]);
-            unset($this->workerPool[$worker->id]);
-            unset($this->processStatusMap[$worker->id]);
-        }
-    }
-
-    public function isUnloading(int $workerId): bool
-    {
-        return \array_key_exists($workerId, $this->workersToUnload);
-    }
-
-    public function markAsDetached(int $pid): void
-    {
-        if (null !== $worker = $this->getWorkerByPid($pid)) {
-            $this->processStatusMap[$worker->id][$pid]->detached = true;
+        if ($worker->status === WorkerInfo::STATUS_STOPPING && \count($this->getWorkerPids($worker->id)) === 0) {
+            unset($this->workersById[$worker->id]);
+            unset($this->workerInfosById[$worker->id]);
         }
     }
 
     public function markAsBlocked(int $pid): void
     {
-        if (null !== $worker = $this->getWorkerByPid($pid)) {
-            $processStatusMap = &$this->processStatusMap;
-            $processStatusMap[$worker->id][$pid]->blocked = true;
-            EventLoop::delay(self::BLOCKED_LABEL_PERSISTENCE, static function () use (&$processStatusMap, $worker, $pid): void {
-                if (isset($processStatusMap[$worker->id][$pid])) {
-                    $processStatusMap[$worker->id][$pid]->blocked = false;
+        if (\array_key_exists($pid, $this->processInfosByPid)) {
+            $processInfosByPid = &$this->processInfosByPid;
+            $processInfosByPid[$pid]->blocked = true;
+            EventLoop::unreference(EventLoop::delay(self::BLOCKED_LABEL_RESET_DELAY_SECONDS, static function () use (&$processInfosByPid, $pid): void {
+                if (\array_key_exists($pid, $processInfosByPid)) {
+                    $processInfosByPid[$pid]->blocked = false;
                 }
-            });
+            }));
         }
     }
 
-    public function markAsHealthy(int $pid, int $time): void
+    public function getWorkerProcessById(int $workerId): WorkerProcess|null
     {
-        if (null !== $worker = $this->getWorkerByPid($pid)) {
-            $this->processStatusMap[$worker->id][$pid]->blocked = false;
-            $this->processStatusMap[$worker->id][$pid]->time = $time;
-        }
+        return $this->workersById[$workerId] ?? null;
     }
 
-    public function getWorkerById(int $id): WorkerProcess|null
+    public function getWorkerInfoById(int $workerId): WorkerInfo|null
     {
-        return $this->workerPool[$id] ?? null;
+        return $this->workerInfosById[$workerId] ?? null;
     }
 
-    public function getWorkerByPid(int $pid): WorkerProcess|null
+    public function getWorkerInfoByPid(int $pid): WorkerInfo|null
     {
-        foreach ($this->processStatusMap as $workerId => $processes) {
-            if (\in_array($pid, \array_keys($processes), true)) {
-                return $this->workerPool[$workerId];
-            }
+        if (\array_key_exists($pid, $this->processInfosByPid)) {
+            return $this->workerInfosById[$this->processInfosByPid[$pid]->workerId];
         }
 
         return null;
     }
 
     /**
-     * @return \Iterator<WorkerProcess>
+     * @return array<WorkerInfo>
      */
-    public function getRegisteredWorkers(): \Iterator
+    public function getWorkerInfos(): array
     {
-        return new \ArrayIterator($this->workerPool);
+        return \array_values($this->workerInfosById);
+    }
+
+    /**
+     * @return array<ProcessInfo>
+     */
+    public function getProcessInfos(): array
+    {
+        return \array_values($this->processInfosByPid);
     }
 
     /**
@@ -136,28 +208,17 @@ final class WorkerPool
      */
     public function getWorkerPids(int $workerId): array
     {
-        return \array_keys($this->processStatusMap[$workerId] ?? []);
-    }
+        if (null === $worker = $this->getWorkerInfoById($workerId)) {
+            throw new PHPStreamServerException('Worker is not registered in the pool');
+        }
 
-    /**
-     * @return \Iterator<WorkerProcess, ProcessStatus>
-     */
-    public function getAllProcessStatuses(): \Iterator
-    {
-        foreach ($this->processStatusMap as $workerId => $processes) {
-            foreach ($processes as $process) {
-                yield $this->workerPool[$workerId] => $process;
+        $pids = [];
+        foreach ($this->processInfosByPid as $process) {
+            if ($process->workerId === $workerId) {
+                $pids[] = $process->pid;
             }
         }
-    }
 
-    public function getWorkerCount(): int
-    {
-        return \count($this->workerPool);
-    }
-
-    public function getProcessesCount(): int
-    {
-        return \iterator_count($this->getAllProcessStatuses());
+        return $pids;
     }
 }

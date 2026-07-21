@@ -6,10 +6,12 @@ namespace PHPStreamServer\Core\Command;
 
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
+use PHPStreamServer\Core\Message\GetProcessesCommand;
 use PHPStreamServer\Core\Message\GetServerStatusCommand;
-use PHPStreamServer\Core\Message\GetSupervisorStatusCommand;
+use PHPStreamServer\Core\Message\GetWorkersCommand;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
+use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
+use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;
 use PHPStreamServer\Core\Plugin\System\Status\ServerStatus;
 use PHPStreamServer\Core\Server;
 
@@ -38,15 +40,20 @@ class StatusCommand extends Command
 
         if ($isRunning) {
             $bus = new SocketFileMessageBus($socketFile);
+
+            /** @var ServerStatus $serverStatus */
             $serverStatus = $bus->dispatch(new GetServerStatusCommand())->await();
-            \assert($serverStatus instanceof ServerStatus);
-            $supervosorStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
-            \assert($supervosorStatus instanceof SupervisorStatus);
+
+            /** @var array<WorkerInfo> $workers */
+            $workers = $bus->dispatch(new GetWorkersCommand())->await();
+
+            /** @var array<ProcessInfo> $processes */
+            $processes = $bus->dispatch(new GetProcessesCommand())->await();
 
             $startedAt = $serverStatus->startedAt;
-            $workersCount = $supervosorStatus->getWorkersCount();
-            $processesCount = $supervosorStatus->getProcessesCount();
-            $totalMemory = $supervosorStatus->getTotalMemory();
+            $workersCount = \count($workers);
+            $processesCount = \count($processes);
+            $totalMemory = \array_sum(\array_map(static fn(ProcessInfo $p): int => $p->memory, $processes));
         } else {
             $startedAt = new \DateTimeImmutable();
             $workersCount = 0;

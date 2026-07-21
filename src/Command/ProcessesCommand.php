@@ -7,10 +7,9 @@ namespace PHPStreamServer\Core\Command;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Message\GetConnectionsStatusCommand;
-use PHPStreamServer\Core\Message\GetSupervisorStatusCommand;
+use PHPStreamServer\Core\Message\GetProcessesCommand;
 use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\ProcessInfo;
-use PHPStreamServer\Core\Plugin\Supervisor\Status\SupervisorStatus;
+use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
 
 use function PHPStreamServer\Core\humanFileSize;
@@ -31,16 +30,14 @@ class ProcessesCommand extends Command
     {
         $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
 
-        $processesStatus = $bus->dispatch(new GetSupervisorStatusCommand())->await();
-        \assert($processesStatus instanceof SupervisorStatus);
+        $processes = $bus->dispatch(new GetProcessesCommand())->await();
 
         $connectionsStatus = $bus->dispatch(new GetConnectionsStatusCommand())->await();
         \assert($connectionsStatus instanceof ConnectionsStatus);
 
         echo "❯ Processes\n";
 
-        if ($processesStatus->getProcessesCount() > 0) {
-            $processes = $processesStatus->getProcesses();
+        if (\count($processes) > 0) {
             \usort($processes, static fn(ProcessInfo $a, ProcessInfo $b) => $a->workerId <=> $b->workerId);
 
             echo (new Table(indent: 1))
