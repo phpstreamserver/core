@@ -18,59 +18,59 @@ final readonly class MetricsHandler
         WorkerPool $pool,
         MessageHandlerInterface $handler,
     ) {
-        $workersTotal = $registry->registerGauge(
+        $workersGauge = $registry->registerGauge(
             namespace: Server::SHORTNAME,
-            name: 'supervisor_workers_total',
-            help: 'Total number of workers',
+            name: 'supervisor_workers',
+            help: 'Current number of registered workers',
         );
 
-        $processesTotal = $registry->registerGauge(
+        $processesGauge = $registry->registerGauge(
             namespace: Server::SHORTNAME,
-            name: 'supervisor_processes_total',
-            help: 'Total number of processes',
+            name: 'supervisor_processes',
+            help: 'Current number of running processes',
         );
 
-        $reloadsTotal = $registry->registerCounter(
+        $reloadsCounter = $registry->registerCounter(
             namespace: Server::SHORTNAME,
             name: 'supervisor_worker_reloads_total',
-            help: 'Total number of workers reloads',
+            help: 'Total number of worker reloads',
         );
 
-        $crashesTotal = $registry->registerCounter(
+        $crashesCounter = $registry->registerCounter(
             namespace: Server::SHORTNAME,
-            name: 'supervisor_worker_crashes_total',
-            help: 'Total number of workers crashes (worker exit with non 0 exit code)',
+            name: 'supervisor_process_crashes_total',
+            help: 'Total number of process crashes (exited with non-zero code)',
         );
 
-        $memoryBytes = $registry->registerGauge(
+        $memoryGauge = $registry->registerGauge(
             namespace: Server::SHORTNAME,
-            name: 'supervisor_memory_bytes',
-            help: 'Memory usage by worker',
+            name: 'supervisor_process_memory_bytes',
+            help: 'Memory usage of the process in bytes',
             labels: ['pid'],
         );
 
-        $handler->subscribe(ProcessExitEvent::class, static function (ProcessExitEvent $message) use ($memoryBytes, $reloadsTotal, $crashesTotal): void {
-            $memoryBytes->remove(['pid' => (string) $message->pid]);
+        $handler->subscribe(ProcessExitEvent::class, static function (ProcessExitEvent $message) use ($memoryGauge, $reloadsCounter, $crashesCounter): void {
+            $memoryGauge->remove(['pid' => (string) $message->pid]);
             if ($message->exitCode === WorkerProcess::RELOAD_EXIT_CODE) {
-                $reloadsTotal->inc();
+                $reloadsCounter->inc();
             } elseif ($message->exitCode > 0) {
-                $crashesTotal->inc();
+                $crashesCounter->inc();
             }
         });
 
-        $heartBeat = static function () use ($pool, $workersTotal, $processesTotal, $memoryBytes): void {
+        $heartbeat = static function () use ($pool, $workersGauge, $processesGauge, $memoryGauge): void {
             $workers = $pool->getWorkerInfos();
             $processes = $pool->getProcessInfos();
 
-            $workersTotal->set(\count($workers));
-            $processesTotal->set(\count($processes));
+            $workersGauge->set(\count($workers));
+            $processesGauge->set(\count($processes));
 
             foreach ($processes as $process) {
-                $memoryBytes->set($process->memory, ['pid' => (string) $process->pid]);
+                $memoryGauge->set($process->memory, ['pid' => (string) $process->pid]);
             }
         };
 
-        EventLoop::unreference(EventLoop::delay(0.3, $heartBeat));
-        EventLoop::unreference(EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $heartBeat));
+        EventLoop::unreference(EventLoop::delay(0.3, $heartbeat));
+        EventLoop::unreference(EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $heartbeat));
     }
 }
