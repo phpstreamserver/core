@@ -55,7 +55,7 @@ final class Supervisor
         $worker = $this->pool->addWorker($workerDefinition);
 
         if ($this->running) {
-            $this->logger->info(\sprintf('Worker "%s" was registered in supervisor with %d processes', $workerDefinition->name, $workerDefinition->count));
+            $this->logger->info(\sprintf('Worker "%s" with %d processes was registered with the supervisor', $workerDefinition->name, $workerDefinition->count));
             $this->startWorker($worker);
         }
     }
@@ -169,7 +169,7 @@ final class Supervisor
             // Send SIGKILL signal to all worker processes after timeout
             foreach ($pidsToKill as $pid) {
                 \posix_kill($pid, SIGKILL);
-                $logger->notice(\sprintf('Worker "%s"[pid:%s] killed after %ss timeout', $worker->name, $pid, $stopTimeout));
+                $logger->notice(\sprintf('Worker "%s" [PID:%d] was killed after a %d-second timeout', $worker->name, $pid, $stopTimeout));
             }
             if (!$future->isComplete()) {
                 $future->complete();
@@ -197,7 +197,7 @@ final class Supervisor
             $this->suspension->resume($worker);
             return true;
         } else {
-            throw new PHPStreamServerException('fork fail');
+            throw new PHPStreamServerException('Fork failed');
         }
     }
 
@@ -213,7 +213,7 @@ final class Supervisor
                     $messageBus->dispatch(new ProcessBlockedEvent($process->pid));
                 });
                 $this->logger->warning(\sprintf(
-                    'Worker "%s"[pid:%d] blocked event loop for more than %s seconds',
+                    'Worker "%s" [PID:%d] blocked the event loop for more than %d seconds',
                     $worker->name ?? '',
                     $process->pid,
                     $blockTime,
@@ -242,11 +242,11 @@ final class Supervisor
 
         if ($this->serverStatus === Status::RUNNING) {
             if ($exitCode === 0) {
-                $this->logger->info(\sprintf('Worker "%s"[pid:%d] exited with code %s', $worker->name, $pid, $exitCode));
+                $this->logger->info(\sprintf('Worker "%s" [PID:%d] exited with code %d', $worker->name, $pid, $exitCode));
             } elseif ($exitCode === WorkerProcess::RELOAD_EXIT_CODE && $worker->reloadable) {
-                $this->logger->info(\sprintf('Worker "%s"[pid:%d] reloaded', $worker->name, $pid));
+                $this->logger->info(\sprintf('Worker "%s" [PID:%d] reloaded', $worker->name, $pid));
             } else {
-                $this->logger->warning(\sprintf('Worker "%s"[pid:%d] exited with code %s', $worker->name, $pid, $exitCode));
+                $this->logger->warning(\sprintf('Worker "%s" [PID:%d] exited with code %d', $worker->name, $pid, $exitCode));
             }
 
             if ($worker->status === WorkerInfo::STATUS_RUNNING) {

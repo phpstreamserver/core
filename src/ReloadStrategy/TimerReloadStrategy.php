@@ -7,9 +7,9 @@ namespace PHPStreamServer\Core\ReloadStrategy;
 interface TimerReloadStrategy extends ReloadStrategy
 {
     /**
-     * Strategy will be triggered repeatedly every N seconds.
+     * The strategy is triggered repeatedly at the configured interval.
      *
-     * @return int Timer interval in seconds
+     * @return int timer interval in seconds
      */
     public function getInterval(): int;
 }

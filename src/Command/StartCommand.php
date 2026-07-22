@@ -63,7 +63,7 @@ class StartCommand extends Command
                 [Server::NAME . ' version:', Server::getVersion()],
                 ['PHP version:', PHP_VERSION],
                 ['Event loop driver:', $eventLoop],
-                ['Workers count:', \count($workers)],
+                ['Worker count:', \count($workers)],
             ])
         ;
 

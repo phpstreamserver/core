@@ -50,7 +50,7 @@ abstract class Plugin
     /**
      * Unregisters a worker if registered.
      */
-    public function unRegisterWorker(int $workerId): void
+    public function unregisterWorker(int $workerId): void
     {
     }
 

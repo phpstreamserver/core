@@ -75,7 +75,7 @@ final class ConnectionsStatus
     /**
      * @return list<ProcessConnectionsInfo>
      */
-    public function getProcessesConnectionsInfo(): array
+    public function getAllProcessConnectionsInfo(): array
     {
         return \array_values($this->processConnections);
     }

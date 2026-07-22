@@ -38,7 +38,7 @@ class ConnectionsCommand extends Command
         if (\count($connections) > 0) {
             echo (new Table(indent: 1))
                 ->setHeaderRow([
-                    'Pid',
+                    'PID',
                     'Local address',
                     'Remote address',
                     'Bytes (RX / TX)',

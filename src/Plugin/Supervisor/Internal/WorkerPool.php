@@ -21,7 +21,7 @@ use function PHPStreamServer\Core\getMemoryUsageByPid;
  */
 final class WorkerPool
 {
-    private const BLOCKED_LABEL_RESET_DELAY_SECONDS = 30;
+    private const BLOCKED_STATUS_RESET_DELAY_SECONDS = 30;
     public const BLOCK_WARNING_THRESHOLD_SECONDS = 6;
 
     /**
@@ -65,7 +65,7 @@ final class WorkerPool
             $processInfosByPid[$message->pid]->blocked = true;
 
             $pid = $message->pid;
-            EventLoop::unreference(EventLoop::delay(self::BLOCKED_LABEL_RESET_DELAY_SECONDS, static function () use (&$processInfosByPid, $pid): void {
+            EventLoop::unreference(EventLoop::delay(self::BLOCKED_STATUS_RESET_DELAY_SECONDS, static function () use (&$processInfosByPid, $pid): void {
                 if (\array_key_exists($pid, $processInfosByPid)) {
                     $processInfosByPid[$pid]->blocked = false;
                 }
@@ -160,7 +160,7 @@ final class WorkerPool
         if (\array_key_exists($pid, $this->processInfosByPid)) {
             $processInfosByPid = &$this->processInfosByPid;
             $processInfosByPid[$pid]->blocked = true;
-            EventLoop::unreference(EventLoop::delay(self::BLOCKED_LABEL_RESET_DELAY_SECONDS, static function () use (&$processInfosByPid, $pid): void {
+            EventLoop::unreference(EventLoop::delay(self::BLOCKED_STATUS_RESET_DELAY_SECONDS, static function () use (&$processInfosByPid, $pid): void {
                 if (\array_key_exists($pid, $processInfosByPid)) {
                     $processInfosByPid[$pid]->blocked = false;
                 }

@@ -7,7 +7,7 @@ namespace PHPStreamServer\Core\Message;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 
 /**
- * Sends multiple messages in a single message.
+ * Sends multiple messages at once.
  *
  * @implements MessageInterface<void>
  */

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\ReloadStrategy;
 
 /**
- * Reload worker after $ttl working time
+ * Reloads the worker after it has run for the specified number of seconds.
  */
 final class TTLReloadStrategy implements TimerReloadStrategy
 {

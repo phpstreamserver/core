@@ -11,7 +11,7 @@ use PHPStreamServer\Core\MessageBus\MessageInterface;
  *
  * @implements MessageInterface<null>
  */
-final readonly class UnRegisterWorkerCommand implements MessageInterface
+final readonly class UnregisterWorkerCommand implements MessageInterface
 {
     public function __construct(public int $workerId)
     {

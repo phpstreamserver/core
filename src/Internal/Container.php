@@ -50,7 +50,7 @@ final class Container implements ContainerInterface
     public function setAlias(string $alias, string $id): void
     {
         if ($alias === $id) {
-            throw new \InvalidArgumentException(\sprintf('An alias cannot reference itself, got a circular reference on "%s".', $alias));
+            throw new \InvalidArgumentException(\sprintf('Alias "%s" cannot reference itself', $alias));
         }
 
         $this->aliases[$alias] = $id;

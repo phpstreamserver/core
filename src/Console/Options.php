@@ -26,13 +26,13 @@ final class Options
      */
     public function __construct(array $argv, array $defaultOptionDefinitions = [])
     {
-        $this->parsedOptions = $this->parseArgvs($argv);
+        $this->parsedOptions = $this->parseArguments($argv);
         foreach ($defaultOptionDefinitions as $defaultOptionDefinition) {
             $this->defaultOptionDefinitions[$defaultOptionDefinition->name] = $defaultOptionDefinition;
         }
     }
 
-    private function parseArgvs(array $argv): array
+    private function parseArguments(array $argv): array
     {
         $options = [];
         for ($i = 0; $i < \count($argv); $i++) {
@@ -40,10 +40,10 @@ final class Options
                 $optionParts = \explode('=', \substr($argv[$i], 2), 2);
                 $options[$optionParts[0]] = $optionParts[1] ?? true;
             } elseif (\str_starts_with($argv[$i], '-')) {
-                $splitOtions = \str_split(\substr($argv[$i], 1));
-                foreach ($splitOtions as $option) {
+                $splitOptions = \str_split(\substr($argv[$i], 1));
+                foreach ($splitOptions as $option) {
                     $options[$option] = true;
-                    if (isset($argv[$i + 1]) && !\str_starts_with($argv[$i + 1], '-') && \count($splitOtions) === 1) {
+                    if (isset($argv[$i + 1]) && !\str_starts_with($argv[$i + 1], '-') && \count($splitOptions) === 1) {
                         $options[$option] = $argv[++$i];
                     }
                 }

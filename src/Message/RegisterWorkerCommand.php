@@ -13,7 +13,7 @@ use function Opis\Closure\serialize as opisSerialize;
 use function Opis\Closure\unserialize as opisUnserialize;
 
 /**
- * Register and start new Worker. Returns unique worker id.
+ * Registers and starts a new worker. Returns the unique worker ID.
  *
  * @implements MessageInterface<int>
  */
@@ -26,7 +26,7 @@ final readonly class RegisterWorkerCommand implements MessageInterface
     public function __serialize(): array
     {
         if ($this->workerProcess::class === SymfonyHttpServerProcess::class) {
-            throw new PHPStreamServerException('SymfonyHttpServerProcess can not be registered through the message bus');
+            throw new PHPStreamServerException('SymfonyHttpServerProcess cannot be registered through the message bus');
         }
 
         return ['workerProcess' => opisSerialize($this->workerProcess)];

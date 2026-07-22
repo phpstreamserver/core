@@ -23,7 +23,7 @@ class ProcessesCommand extends Command
 
     final public static function getDescription(): string
     {
-        return 'Show processes status';
+        return 'Show process status';
     }
 
     public function execute(string $pidFile, string $socketFile): int
@@ -42,7 +42,7 @@ class ProcessesCommand extends Command
 
             echo (new Table(indent: 1))
                 ->setHeaderRow([
-                    'Pid',
+                    'PID',
                     'User',
                     'Memory',
                     'Worker',
@@ -51,22 +51,22 @@ class ProcessesCommand extends Command
                     'Bytes (RX / TX)',
                     'Status',
                 ])
-                ->addRows(\array_map(array: $processes, callback: static function (ProcessInfo $w) use ($connectionsStatus): array {
-                    $c = $connectionsStatus->getProcessConnectionsInfo($w->pid);
+                ->addRows(\array_map(array: $processes, callback: static function (ProcessInfo $p) use ($connectionsStatus): array {
+                    $c = $connectionsStatus->getProcessConnectionsInfo($p->pid);
 
                     return [
-                        $w->pid,
-                        $w->user === 'root' ? $w->user : "<color;fg=gray>{$w->user}</>",
-                        $w->memory > 0 ? humanFileSize($w->memory) : '<color;fg=gray>??</>',
-                        $w->name,
+                        $p->pid,
+                        $p->user === 'root' ? $p->user : "<color;fg=gray>{$p->user}</>",
+                        $p->memory > 0 ? humanFileSize($p->memory) : '<color;fg=gray>??</>',
+                        $p->name,
                         \count($c->connections) === 0 ? '<color;fg=gray>0</>' : \count($c->connections),
                         $c->requests === 0 ? '<color;fg=gray>0</>' : $c->requests,
                         $c->rx === 0 && $c->tx === 0
                             ? \sprintf('<color;fg=gray>(%s / %s)</>', humanFileSize($c->rx), humanFileSize($c->tx))
                             : \sprintf('(%s / %s)', humanFileSize($c->rx), humanFileSize($c->tx)),
                         match (true) {
-                            $w->detached => '[<color;fg=cyan>DETACHED</>]',
-                            $w->blocked => '[<color;fg=yellow>BLOCKED</>]',
+                            $p->detached => '[<color;fg=cyan>DETACHED</>]',
+                            $p->blocked => '[<color;fg=yellow>BLOCKED</>]',
                             default => '[<color;fg=green>OK</>]',
                         },
                     ];

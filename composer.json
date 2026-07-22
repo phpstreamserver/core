@@ -1,7 +1,7 @@
 {
     "name": "phpstreamserver/core",
-    "description": "PHPStreamServer is a high performance PHP application server",
-    "keywords": ["phpstreamserver", "async", "server", "process", "socket", "stream"],
+    "description": "Application server and process manager for modern PHP applications",
+    "keywords": ["phpstreamserver", "async", "server", "process", "socket", "stream", "supervisor"],
     "homepage": "https://phpstreamserver.dev",
     "type": "library",
     "license": "MIT",

@@ -69,7 +69,7 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
 
                     $socket->write($payload);
                 } catch (StreamException) {
-                    // if socket is not writable anymore
+                    // The socket is no longer writable
                 } finally {
                     $socket->end();
                 }

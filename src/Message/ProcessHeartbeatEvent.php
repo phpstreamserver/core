@@ -7,7 +7,8 @@ namespace PHPStreamServer\Core\Message;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 
 /**
- * Process sends this message periodically
+ * A process sends this message periodically.
+ *
  * @implements MessageInterface<null>
  */
 final readonly class ProcessHeartbeatEvent implements MessageInterface

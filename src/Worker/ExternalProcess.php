@@ -31,17 +31,17 @@ final class ExternalProcess extends WorkerProcess
         $worker->bus->dispatch(new ProcessDetachedEvent($worker->pid))->await();
 
         if ($worker->command === '') {
-            $worker->logger->critical('External process call error: command cannot be empty', ['comand' => $worker->command]);
+            $worker->logger->critical('External process call error: command cannot be empty', ['command' => $worker->command]);
             $worker->stop(1);
             return;
         }
 
-        // Check if command contains logic operators such as "&&" and "||"
+        // Check whether the command contains logical operators such as "&&" and "||"
         if (\preg_match('/(\'[^\']*\'|"[^"]*")(*SKIP)(*FAIL)|&&|\|\|/', $worker->command) === 1) {
-            $worker->logger->critical(\sprintf(
-                'External process call error: logical operators are not supported. Use a shell with the -c option e.g., "/bin/sh -c "%s""',
-                $worker->command,
-            ), ['comand' => $worker->command]);
+            $worker->logger->critical(
+                'External process call error: logical operators are not supported. Use a shell with the -c option, for example: /bin/sh -c \'command1 && command2\'',
+                ['command' => $worker->command],
+            );
 
             $worker->stop(1);
             return;
@@ -51,7 +51,7 @@ final class ExternalProcess extends WorkerProcess
         \register_shutdown_function(self::exec(...), $absolutePath, $args);
 
         \set_error_handler(static function (int $code) use ($worker): true {
-            $worker->logger->critical('External process call error: ' . \posix_strerror($code), ['comand' => $worker->command]);
+            $worker->logger->critical('External process call error: ' . \posix_strerror($code), ['command' => $worker->command]);
             return true;
         });
 
@@ -59,7 +59,7 @@ final class ExternalProcess extends WorkerProcess
     }
 
     /**
-     * Prepare command for pcntl_exec acceptable format
+     * Prepare the command for use with pcntl_exec()
      *
      * @param non-empty-string $command
      * @return array{0: string, 1: list<string>}
@@ -75,7 +75,7 @@ final class ExternalProcess extends WorkerProcess
     }
 
     /**
-     * Give control to an external program
+     * Gives control to an external program
      *
      * @param string $path path to a binary executable or script
      * @param array $args array of argument strings passed to the program

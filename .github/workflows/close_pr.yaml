@@ -16,7 +16,6 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             COMMENT: |
               Thank you for your pull request.
-              However, you have submitted this PR on a read-only sub split of `phpstreamserver/phpstreamserver`.
-              Please submit your PR on the https://github.com/phpstreamserver/phpstreamserver repository.
-              
-              Thanks!
+              This repository is a read-only split of `phpstreamserver/phpstreamserver` and does not accept pull requests.
+              Please submit your pull request to the main repository instead:
+              https://github.com/phpstreamserver/phpstreamserver

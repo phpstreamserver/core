@@ -76,8 +76,8 @@ class StatusCommand extends Command
 
         if ($isRunning) {
             $rows = [...$rows, ...[
-                ['Workers count:', $workersCount],
-                ['Processes count:', $processesCount],
+                ['Worker count:', $workersCount],
+                ['Process count:', $processesCount],
                 ['Memory usage:', humanFileSize($totalMemory)],
             ]];
         }

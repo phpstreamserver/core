@@ -109,7 +109,7 @@ class WorkerProcess implements Process
     final public function assignId(int $id): void
     {
         if (isset($this->id)) {
-            throw new PHPStreamServerException('Worker id has already been assigned');
+            throw new PHPStreamServerException('Worker ID has already been assigned');
         }
 
         $this->id = $id;
@@ -121,7 +121,7 @@ class WorkerProcess implements Process
      */
     final public function run(ContainerInterface $workerContainer): int
     {
-        // some command line SAPIs (e.g., phpdbg) don't have that function
+        // Some command-line SAPIs (e.g., phpdbg) do not provide this function
         if (\function_exists('cli_set_process_title')) {
             \cli_set_process_title(\sprintf('%s: worker process  %s', Server::NAME, $this->name));
         }
@@ -158,7 +158,7 @@ class WorkerProcess implements Process
         EventLoop::onSignal(SIGTERM, fn() => $this->stop());
         EventLoop::onSignal(SIGUSR1, fn() => $this->reload());
 
-        // Force run garbage collection periodically
+        // Run garbage collection periodically
         EventLoop::repeat(self::GC_PERIOD, static function (): void {
             \gc_collect_cycles();
             \gc_mem_caches();

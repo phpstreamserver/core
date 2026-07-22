@@ -51,7 +51,7 @@ final class ReloadStrategyStack
     }
 
     /**
-     * @param mixed $event any value that checked by reload strategies. Could be exception, request etc.
+     * @param mixed $event any value to be checked by reload strategies, such as an exception or request
      */
     public function emitEvent(mixed $event): void
     {

@@ -47,7 +47,7 @@ trait ProcessUserChange
         // Set uid and gid
         if ($uid !== \posix_getuid() || $gid !== \posix_getgid()) {
             if (!\posix_setgid($gid) || !\posix_initgroups($userInfo['name'], $gid) || !\posix_setuid($uid)) {
-                throw new UserChangeException('Changing guid or uid fails');
+                throw new UserChangeException('Changing GID or UID failed');
             }
         }
     }

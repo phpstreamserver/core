@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\ReloadStrategy;
 
 /**
- * Reload worker if worker memory usage has increased $maxMemory value
+ * Reloads the worker when its memory usage exceeds the specified threshold
  */
 final class MaxMemoryReloadStrategy implements TimerReloadStrategy
 {

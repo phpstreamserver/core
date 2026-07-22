@@ -12,7 +12,7 @@ use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\Message\RegisterWorkerCommand;
 use PHPStreamServer\Core\Message\ReloadServerCommand;
 use PHPStreamServer\Core\Message\StopServerCommand;
-use PHPStreamServer\Core\Message\UnRegisterWorkerCommand;
+use PHPStreamServer\Core\Message\UnregisterWorkerCommand;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
@@ -141,7 +141,7 @@ final class MasterProcess
     {
         $startFile = getStartFile();
 
-        // some command line SAPIs (e.g., phpdbg) don't have that function
+        // Some command-line SAPIs (e.g., phpdbg) do not provide this function
         if (\function_exists('cli_set_process_title')) {
             \cli_set_process_title(\sprintf('%s: master process  start_file=%s', Server::NAME, $startFile));
         }
@@ -164,7 +164,7 @@ final class MasterProcess
         EventLoop::onSignal(SIGQUIT, $stopCallback);
         EventLoop::onSignal(SIGUSR1, $reloadCallback);
 
-        // Force run garbage collection periodically
+        // Run garbage collection periodically
         EventLoop::repeat(self::GC_PERIOD, static function (): void {
             \gc_collect_cycles();
             \gc_mem_caches();
@@ -199,8 +199,8 @@ final class MasterProcess
                 return $command->workerProcess->id ?? 0;
             });
 
-            $this->messageHandler->subscribe(UnRegisterWorkerCommand::class, function (UnRegisterWorkerCommand $command): void {
-                $this->unRegisterWorker($command->workerId);
+            $this->messageHandler->subscribe(UnregisterWorkerCommand::class, function (UnregisterWorkerCommand $command): void {
+                $this->unregisterWorker($command->workerId);
             });
 
             foreach ($this->plugins as $plugin) {
@@ -216,13 +216,13 @@ final class MasterProcess
 
     private function registerWorker(Process ...$workers): void
     {
-        /** @var array<class-string<Process>, class-string<Plugin>> $canNotBeRegistered */
-        $canNotBeRegistered = [];
+        /** @var array<class-string<Process>, class-string<Plugin>> $cannotBeRegistered */
+        $cannotBeRegistered = [];
 
         foreach ($workers as $worker) {
             foreach ($worker::handledBy() as $handledByPluginClass) {
                 if (!isset($this->plugins[$handledByPluginClass])) {
-                    $canNotBeRegistered[$worker::class] = $handledByPluginClass;
+                    $cannotBeRegistered[$worker::class] = $handledByPluginClass;
                     continue 2;
                 }
             }
@@ -232,34 +232,34 @@ final class MasterProcess
             }
         }
 
-        foreach ($canNotBeRegistered as $workerClass => $handledByClass) {
-            $this->logger->error(\sprintf('"%s" process cannot be procesed. Register the "%s" plugin', $workerClass, $handledByClass));
+        foreach ($cannotBeRegistered as $workerClass => $handledByClass) {
+            $this->logger->error(\sprintf('Cannot register process "%s": required plugin "%s" is missing', $workerClass, $handledByClass));
         }
     }
 
-    private function unRegisterWorker(int $workerId): void
+    private function unregisterWorker(int $workerId): void
     {
         foreach ($this->plugins as $plugin) {
-            $plugin->unRegisterWorker($workerId);
+            $plugin->unregisterWorker($workerId);
         }
     }
 
     /**
-     * Fork process for Daemonize
+     * Forks the master process to run it as a daemon.
      *
-     * @return bool return true in master process and false in child
+     * @return bool true in the parent process and false in the daemonized child process
      */
     private function doDaemonize(): bool
     {
         $pid = \pcntl_fork();
         if ($pid === -1) {
-            throw new PHPStreamServerException('Fork fail');
+            throw new PHPStreamServerException('Fork failed');
         }
         if ($pid > 0) {
             return true;
         }
         if (\posix_setsid() === -1) {
-            throw new PHPStreamServerException('Setsid fail');
+            throw new PHPStreamServerException('Setsid failed');
         }
         return false;
     }
@@ -279,7 +279,7 @@ final class MasterProcess
         }
 
         if (false === \file_put_contents($this->pidFile, (string) \posix_getpid())) {
-            throw new PHPStreamServerException(\sprintf('Cannot save pid to %s', $this->pidFile));
+            throw new PHPStreamServerException(\sprintf('Cannot save PID to %s', $this->pidFile));
         }
     }
 
@@ -323,7 +323,7 @@ final class MasterProcess
         }
     }
 
-    // After forking process we need to free resources in child process to get rid of all master process artifacts
+    // After forking a worker, free inherited master-process resources in the child process
     private function free(): void
     {
         $identifiers = EventLoop::getDriver()->getIdentifiers();

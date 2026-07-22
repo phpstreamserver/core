@@ -19,7 +19,7 @@ class WorkersCommand extends Command
 
     final public static function getDescription(): string
     {
-        return 'Show workers status';
+        return 'Show worker status';
     }
 
     public function execute(string $pidFile, string $socketFile): int

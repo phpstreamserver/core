@@ -32,7 +32,7 @@ final readonly class App
      */
     public function run(array &$plugins, array &$workers): int
     {
-        $curentCommand = self::getCurrentCommand();
+        $currentCommand = self::getCurrentCommand();
         $options = self::getOptions();
         $allRegisteredCommands = self::getAllRegisteredCommands($plugins);
         $map = new \WeakMap();
@@ -53,7 +53,7 @@ final readonly class App
         }
 
         foreach ($allRegisteredCommands as $command) {
-            if ($command::getName() !== $curentCommand) {
+            if ($command::getName() !== $currentCommand) {
                 continue;
             }
 
@@ -66,7 +66,7 @@ final readonly class App
             }
 
             // Free memory
-            unset($curentCommand, $options, $allRegisteredCommands, $map);
+            unset($currentCommand, $options, $allRegisteredCommands, $map);
 
             try {
                 return $command->execute($this->pidFile, $this->socketFile);
@@ -74,13 +74,13 @@ final readonly class App
                 echo \sprintf("<color;bg=red>%s is not running</>\n", Server::NAME);
                 return 1;
             } catch (ServerIsRunning) {
-                echo \sprintf("<color;bg=red>%s already running</>\n", Server::NAME);
+                echo \sprintf("<color;bg=red>%s is already running</>\n", Server::NAME);
                 return 1;
             }
         }
 
-        if ($curentCommand !== null) {
-            echo \sprintf("<color;bg=red>✘ Command \"%s\" does not exist</>\n", $curentCommand);
+        if ($currentCommand !== null) {
+            echo \sprintf("<color;bg=red>✘ Command \"%s\" does not exist</>\n", $currentCommand);
             return 1;
         }
 

@@ -43,7 +43,7 @@ final class SupervisorPlugin extends Plugin
         $this->supervisor->registerWorker($worker);
     }
 
-    public function unRegisterWorker(int $workerId): void
+    public function unregisterWorker(int $workerId): void
     {
         $this->supervisor->unregisterWorker($workerId);
     }

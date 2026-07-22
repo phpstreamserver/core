@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\ReloadStrategy;
 
 /**
- * Reload worker each time when exception occurs
+ * Reloads the worker whenever an exception is thrown
  */
 final class ExceptionReloadStrategy implements ReloadStrategy
 {
@@ -16,7 +16,7 @@ final class ExceptionReloadStrategy implements ReloadStrategy
     ];
 
     /**
-     * @param array<class-string<\Throwable>> $allowedExceptions exceptions that will not be trigger reloading
+     * @param array<class-string<\Throwable>> $allowedExceptions exceptions that will not trigger a reload
      */
     public function __construct(array $allowedExceptions = [])
     {
