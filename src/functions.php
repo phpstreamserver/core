@@ -47,7 +47,7 @@ function humanFileSize(int $bytes): string
         return "$bytes GiB";
     }
     $bytes = \round($bytes / 1024, 1);
-    return "$bytes PiB";
+    return "$bytes TiB";
 }
 
 function reportErrors(): bool
