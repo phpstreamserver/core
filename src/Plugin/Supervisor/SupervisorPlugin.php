@@ -6,7 +6,6 @@ namespace PHPStreamServer\Core\Plugin\Supervisor;
 
 use Amp\Future;
 use PHPStreamServer\Core\Command\ProcessesCommand;
-use PHPStreamServer\Core\Exception\ServiceNotFoundException;
 use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
@@ -50,25 +49,19 @@ final class SupervisorPlugin extends Plugin
 
     public function onStart(): void
     {
-        /** @var Suspension $suspension */
-        $suspension = $this->masterContainer->getService('main_suspension');
-        /** @var LoggerInterface $logger */
+        $suspension = $this->masterContainer->getService(Suspension::class);
         $logger = &$this->masterContainer->getService(LoggerInterface::class);
-        $bus = &$this->masterContainer->getService(MessageBusInterface::class);
-        $this->handler = &$this->masterContainer->getService(MessageHandlerInterface::class);
+        $bus = $this->masterContainer->getService(MessageBusInterface::class);
+        $this->handler = $this->masterContainer->getService(MessageHandlerInterface::class);
 
         $this->supervisor->start($suspension, $logger, $bus, $this->handler);
     }
 
     public function afterStart(): void
     {
-        if (\interface_exists(RegistryInterface::class)) {
-            try {
-                $registry = $this->masterContainer->getService(RegistryInterface::class);
-                $this->masterContainer->setService(MetricsHandler::class, new MetricsHandler($registry, $this->supervisor->pool, $this->handler));
-            } catch (ServiceNotFoundException) {
-                // no action
-            }
+        if (\interface_exists(RegistryInterface::class) && $this->masterContainer->has(RegistryInterface::class)) {
+            $registry = $this->masterContainer->getService(RegistryInterface::class);
+            new MetricsHandler($registry, $this->supervisor->pool, $this->handler);
         }
     }
 

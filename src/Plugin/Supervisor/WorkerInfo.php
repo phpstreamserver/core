@@ -11,7 +11,7 @@ final class WorkerInfo
     public const STATUS_STOPPING = 'stopping';
 
     /**
-     * @param "starting"|"running"|"stopping" $status
+     * @param self::STATUS_* $status
      */
     public function __construct(
         public readonly int $id,

@@ -13,11 +13,8 @@ use Revolt\EventLoop;
 
 final readonly class MetricsHandler
 {
-    public function __construct(
-        RegistryInterface $registry,
-        WorkerPool $pool,
-        MessageHandlerInterface $handler,
-    ) {
+    public function __construct(RegistryInterface $registry, WorkerPool $pool, MessageHandlerInterface $handler)
+    {
         $workersGauge = $registry->registerGauge(
             namespace: Server::SHORTNAME,
             name: 'supervisor_workers',
@@ -70,7 +67,7 @@ final readonly class MetricsHandler
             }
         };
 
-        EventLoop::unreference(EventLoop::delay(0.3, $heartbeat));
+        EventLoop::unreference(EventLoop::delay(0.1, $heartbeat));
         EventLoop::unreference(EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $heartbeat));
     }
 }

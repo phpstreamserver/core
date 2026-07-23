@@ -76,7 +76,7 @@ final class MasterProcess
 
         // Init master container
         $this->masterContainer = new Container();
-        $this->masterContainer->setService('main_suspension', $this->suspension);
+        $this->masterContainer->setService(Suspension::class, $this->suspension);
         $this->masterContainer->registerService(MessageHandlerInterface::class, fn() => new SocketFileMessageHandler($this->socketFile));
         $this->masterContainer->setAlias(MessageBusInterface::class, MessageHandlerInterface::class);
         $this->masterContainer->registerService(LoggerInterface::class, $defaultLogger = static fn() => new ConsoleLogger());
