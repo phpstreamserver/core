@@ -308,7 +308,7 @@ class SupervisedWorker implements WorkerInterface
      */
     public function onStart(\Closure $onStart, int $priority = 0): void
     {
-        $this->onStartCallbacks[$priority . \uniqid()] = $onStart;
+        $this->onStartCallbacks[$priority . ':' . \uniqid()] = $onStart;
         \ksort($this->onStartCallbacks, SORT_NUMERIC);
     }
 
@@ -317,7 +317,7 @@ class SupervisedWorker implements WorkerInterface
      */
     public function onStop(\Closure $onStop, int $priority = 0): void
     {
-        $this->onStopCallbacks[$priority . \uniqid()] = $onStop;
+        $this->onStopCallbacks[$priority . ':' . \uniqid()] = $onStop;
         \ksort($this->onStopCallbacks, SORT_NUMERIC);
     }
 
@@ -326,7 +326,7 @@ class SupervisedWorker implements WorkerInterface
      */
     public function onReload(\Closure $onReload, int $priority = 0): void
     {
-        $this->onReloadCallbacks[$priority . \uniqid()] = $onReload;
+        $this->onReloadCallbacks[$priority . ':' . \uniqid()] = $onReload;
         \ksort($this->onReloadCallbacks, SORT_NUMERIC);
     }
 }
