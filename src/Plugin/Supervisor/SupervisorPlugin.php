@@ -37,16 +37,6 @@ final class SupervisorPlugin extends Plugin
         $this->supervisor = new Supervisor($this->status, $stopTimeout, $this->restartDelay);
     }
 
-    public function registerWorker(Process $worker): void
-    {
-        $this->supervisor->registerWorker($worker);
-    }
-
-    public function unregisterWorker(int $workerId): void
-    {
-        $this->supervisor->unregisterWorker($workerId);
-    }
-
     public function onStart(): void
     {
         $suspension = $this->masterContainer->getService(Suspension::class);
@@ -63,6 +53,16 @@ final class SupervisorPlugin extends Plugin
             $registry = $this->masterContainer->getService(RegistryInterface::class);
             new MetricsHandler($registry, $this->supervisor->pool, $this->handler);
         }
+    }
+
+    public function registerWorker(Process $worker): void
+    {
+        $this->supervisor->registerWorker($worker);
+    }
+
+    public function unregisterWorker(int $workerId): void
+    {
+        $this->supervisor->unregisterWorker($workerId);
     }
 
     public function onStop(): Future

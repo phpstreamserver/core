@@ -174,8 +174,24 @@ final class MasterProcess
         ErrorHandler::register($this->logger);
         EventLoop::setErrorHandler(ErrorHandler::handleException(...));
 
-        $this->registerWorker(...$this->workers);
-        unset($this->workers);
+        $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $command): void {
+            $this->stop($command->code);
+        });
+
+        $this->messageHandler->subscribe(ReloadServerCommand::class, function (ReloadServerCommand $command): void {
+            $this->reload();
+        });
+
+        $this->messageHandler->subscribe(RegisterWorkerCommand::class, function (RegisterWorkerCommand $command): int {
+            $this->registerWorker($command->workerProcess);
+
+            /** @psalm-suppress NoInterfaceProperties */
+            return $command->workerProcess->id ?? 0;
+        });
+
+        $this->messageHandler->subscribe(UnregisterWorkerCommand::class, function (UnregisterWorkerCommand $command): void {
+            $this->unregisterWorker($command->workerId);
+        });
 
         foreach ($this->plugins as $plugin) {
             EventLoop::queue(static function () use ($plugin) {
@@ -183,26 +199,12 @@ final class MasterProcess
             });
         }
 
+        EventLoop::queue(function (): void {
+            $this->registerWorker(...$this->workers);
+            unset($this->workers);
+        });
+
         EventLoop::defer(function (): void {
-            $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $command): void {
-                $this->stop($command->code);
-            });
-
-            $this->messageHandler->subscribe(ReloadServerCommand::class, function (ReloadServerCommand $command): void {
-                $this->reload();
-            });
-
-            $this->messageHandler->subscribe(RegisterWorkerCommand::class, function (RegisterWorkerCommand $command): int {
-                $this->registerWorker($command->workerProcess);
-
-                /** @psalm-suppress NoInterfaceProperties */
-                return $command->workerProcess->id ?? 0;
-            });
-
-            $this->messageHandler->subscribe(UnregisterWorkerCommand::class, function (UnregisterWorkerCommand $command): void {
-                $this->unregisterWorker($command->workerId);
-            });
-
             foreach ($this->plugins as $plugin) {
                 EventLoop::queue(static function () use ($plugin): void {
                     $plugin->afterStart();

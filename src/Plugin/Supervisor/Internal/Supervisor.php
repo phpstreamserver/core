@@ -30,7 +30,6 @@ use function PHPStreamServer\Core\generateWorkerId;
  */
 final class Supervisor
 {
-    private bool $running = false;
     private LoggerInterface $logger;
     public MessageBusInterface $messageBus;
     public MessageHandlerInterface $messageHandler;
@@ -47,32 +46,8 @@ final class Supervisor
         $this->restartDelay = \max($restartDelay, 0);
     }
 
-    public function registerWorker(WorkerProcess $workerDefinition): void
-    {
-        $workerId = generateWorkerId();
-        $workerDefinition->assignId($workerId);
-
-        $worker = $this->pool->addWorker($workerDefinition);
-
-        if ($this->running) {
-            $this->logger->info(\sprintf('Worker "%s" with %d processes was registered with the supervisor', $workerDefinition->name, $workerDefinition->count));
-            $this->startWorker($worker);
-        }
-    }
-
-    public function unregisterWorker(int $workerId): void
-    {
-        if (null === $worker = $this->pool->getWorkerInfoById($workerId)) {
-            return;
-        }
-
-        $this->pool->removeWorker($worker->id);
-        $this->stopWorker($worker);
-    }
-
     public function start(Suspension $suspension, LoggerInterface &$logger, MessageBusInterface &$messageBus, MessageHandlerInterface &$messageHandler): void
     {
-        $this->running = true;
         $this->suspension = $suspension;
         $this->logger = &$logger;
         $this->messageBus = &$messageBus;
@@ -92,8 +67,25 @@ final class Supervisor
         $this->messageHandler->subscribe(GetProcessesCommand::class, static function () use ($pool): array {
             return $pool->getProcessInfos();
         });
+    }
 
-        $this->startAllWorkers();
+    public function registerWorker(WorkerProcess $worker): void
+    {
+        $workerId = generateWorkerId();
+        $worker->assignId($workerId);
+
+        $workerInfo = $this->pool->addWorker($worker);
+        $this->startWorker($workerInfo);
+    }
+
+    public function unregisterWorker(int $workerId): void
+    {
+        if (null === $worker = $this->pool->getWorkerInfoById($workerId)) {
+            return;
+        }
+
+        $this->pool->removeWorker($worker->id);
+        $this->stopWorker($worker);
     }
 
     public function stop(): Future
@@ -114,21 +106,6 @@ final class Supervisor
                 \posix_kill($process->pid, $process->detached ? SIGTERM : SIGUSR1);
             }
         }
-    }
-
-    private function startAllWorkers(): void
-    {
-        EventLoop::queue(function (): void {
-            foreach ($this->pool->getWorkerInfos() as $worker) {
-                $workerProcess = $this->pool->getWorkerProcessById($worker->id);
-                \assert($workerProcess !== null);
-                while (\count($this->pool->getWorkerPids($worker->id)) < $worker->processCount) {
-                    if ($this->spawnProcess($workerProcess)) {
-                        return;
-                    }
-                }
-            }
-        });
     }
 
     private function startWorker(WorkerInfo $worker): Future

@@ -11,14 +11,25 @@ use PHPStreamServer\Core\Internal\Status;
 use PHPStreamServer\Core\Process;
 
 /**
+ * Base class for plugins.
+ *
  * @template T of Process
  */
 abstract class Plugin
 {
+    /**
+     * The master-process service container.
+     */
     protected readonly ContainerInterface $masterContainer;
+
+    /**
+     * The container inherited by worker processes.
+     */
     protected readonly ContainerInterface $workerContainer;
 
     /**
+     * The current master-process status.
+     *
      * @readonly
      */
     protected Status $status;
@@ -39,7 +50,35 @@ abstract class Plugin
     }
 
     /**
-     * Registers a worker.
+     * Initializes the plugin before master-process startup.
+     *
+     * The service containers and current server status are available when this method is called.
+     */
+    protected function beforeStart(): void
+    {
+    }
+
+    /**
+     * Starts the plugin in the master process.
+     *
+     * Called during startup before configured workers are registered.
+     */
+    public function onStart(): void
+    {
+    }
+
+    /**
+     * Runs after onStart() and after all configured workers have been registered.
+     */
+    public function afterStart(): void
+    {
+    }
+
+    /**
+     * Registers a worker with this plugin.
+     *
+     * Called when the master registers a worker that declares this plugin in Process::handledBy().
+     * Depending on the plugin, this may configure, schedule, or start the worker.
      *
      * @param T $worker
      */
@@ -48,35 +87,20 @@ abstract class Plugin
     }
 
     /**
-     * Unregisters a worker if registered.
+     * Notifies the plugin that a worker has been unregistered.
+     *
+     * Called for every plugin when the master unregisters a worker.
+     * Implementations MUST ignore unknown worker IDs.
      */
     public function unregisterWorker(int $workerId): void
     {
     }
 
     /**
-     * Runs when the plugin is initialized.
-     */
-    protected function beforeStart(): void
-    {
-    }
-
-    /**
-     * Runs during server startup.
-     */
-    public function onStart(): void
-    {
-    }
-
-    /**
-     * Runs after server startup.
-     */
-    public function afterStart(): void
-    {
-    }
-
-    /**
-     * Runs during server shutdown.
+     * Stops the plugin during master-process shutdown.
+     *
+     * Returns a future that completes when the plugin has finished its shutdown work.
+     * The master waits for all plugin shutdown futures before exiting.
      */
     public function onStop(): Future
     {
@@ -84,14 +108,18 @@ abstract class Plugin
     }
 
     /**
-     * Runs when the server reloads.
+     * Called in the master process when a server reload is requested.
+     *
+     * Override this method to refresh plugin state or reload resources managed by the plugin.
      */
     public function onReload(): void
     {
     }
 
     /**
-     * Returns the plugin's CLI commands.
+     * Returns CLI commands provided by the plugin.
+     *
+     * Called before plugin initialization. Implementations must not access $masterContainer, $workerContainer, or $status.
      *
      * @return iterable<Command>
      */
