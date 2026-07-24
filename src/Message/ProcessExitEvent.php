@@ -14,6 +14,7 @@ final readonly class ProcessExitEvent implements MessageInterface
     public function __construct(
         public int $pid,
         public int $exitCode,
+        public int|null $terminationSignal,
     ) {
     }
 }

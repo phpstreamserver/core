@@ -23,6 +23,7 @@ use Revolt\EventLoop\Suspension;
 
 use function Amp\async;
 use function Amp\Future\await;
+use function PHPStreamServer\Core\strSignal;
 
 /**
  * @internal
@@ -200,7 +201,7 @@ final class Supervisor
         $this->pool->addProcess($workerId, $pid);
     }
 
-    private function onProcessStop(int $pid, int $exitCode): void
+    private function onProcessStop(int $pid, int $exitCode, int|null $terminationSignal): void
     {
         if (null === $workerInfo = $this->pool->getWorkerInfoByPid($pid)) {
             return;
@@ -209,12 +210,14 @@ final class Supervisor
         $this->pool->removeProcess($pid);
 
         $messageBus = $this->messageBus;
-        EventLoop::queue(static function () use ($messageBus, $pid, $exitCode): void {
-            $messageBus->dispatch(new ProcessExitEvent($pid, $exitCode));
+        EventLoop::queue(static function () use ($messageBus, $pid, $exitCode, $terminationSignal): void {
+            $messageBus->dispatch(new ProcessExitEvent($pid, $exitCode, $terminationSignal));
         });
 
         if ($this->serverStatus === Status::RUNNING) {
-            if ($exitCode === 0) {
+            if ($terminationSignal !== null) {
+                $this->logger->warning(\sprintf('Worker "%s" [PID:%d] terminated with signal %s (%d)', $workerInfo->name, $pid, strSignal($terminationSignal), $terminationSignal));
+            } elseif ($exitCode === 0) {
                 $this->logger->info(\sprintf('Worker "%s" [PID:%d] exited with code %d', $workerInfo->name, $pid, $exitCode));
             } elseif ($exitCode === SupervisedWorker::RELOAD_EXIT_CODE && $workerInfo->reloadable) {
                 $this->logger->info(\sprintf('Worker "%s" [PID:%d] reloaded', $workerInfo->name, $pid));
