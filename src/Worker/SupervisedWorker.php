@@ -9,7 +9,6 @@ use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Exception\UserChangeException;
 use PHPStreamServer\Core\Internal\ErrorHandler;
-use PHPStreamServer\Core\Internal\ProcessUserChange;
 use PHPStreamServer\Core\Internal\Status;
 use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\Message\CompositeMessage;
@@ -28,11 +27,10 @@ use Revolt\EventLoop\DriverFactory;
 
 use function PHPStreamServer\Core\getCurrentGroup;
 use function PHPStreamServer\Core\getCurrentUser;
+use function PHPStreamServer\Core\setUserAndGroup;
 
 class SupervisedWorker implements WorkerInterface
 {
-    use ProcessUserChange;
-
     final public const HEARTBEAT_PERIOD = 2.5;
     final public const RELOAD_EXIT_CODE = 100;
     private const GC_PERIOD = 120;
@@ -136,9 +134,9 @@ class SupervisedWorker implements WorkerInterface
         $this->bus = $workerContainer->getService(MessageBusInterface::class);
 
         try {
-            $this->setUserAndGroup($this->user, $this->group);
+            setUserAndGroup($this->user, $this->group);
         } catch (UserChangeException $e) {
-            $this->logger->warning($e->getMessage(), [(new \ReflectionObject($this))->getShortName() => $this->name]);
+            $this->logger->error(\sprintf('Worker "%s" failed to change process identity: %s', $this->name, $e->getMessage()));
         }
 
         $reloadStrategyStack = new ReloadStrategyStack($this->reload(...), $this->reloadStrategies);
