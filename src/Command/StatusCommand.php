@@ -44,16 +44,16 @@ class StatusCommand extends Command
             /** @var ServerStatus $serverStatus */
             $serverStatus = $bus->dispatch(new GetServerStatusCommand())->await();
 
-            /** @var array<WorkerInfo> $workers */
-            $workers = $bus->dispatch(new GetWorkersCommand())->await();
+            /** @var array<WorkerInfo> $workerInfos */
+            $workerInfos = $bus->dispatch(new GetWorkersCommand())->await();
 
-            /** @var array<ProcessInfo> $processes */
-            $processes = $bus->dispatch(new GetProcessesCommand())->await();
+            /** @var array<ProcessInfo> $processInfos */
+            $processInfos = $bus->dispatch(new GetProcessesCommand())->await();
 
             $startedAt = $serverStatus->startedAt;
-            $workersCount = \count($workers);
-            $processesCount = \count($processes);
-            $totalMemory = \array_sum(\array_map(static fn(ProcessInfo $p): int => $p->memory, $processes));
+            $workersCount = \count($workerInfos);
+            $processesCount = \count($processInfos);
+            $totalMemory = \array_sum(\array_map(static fn(ProcessInfo $p): int => $p->memory, $processInfos));
         } else {
             $startedAt = new \DateTimeImmutable();
             $workersCount = 0;

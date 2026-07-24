@@ -8,12 +8,12 @@ use Amp\Future;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Internal\Status;
-use PHPStreamServer\Core\Process;
+use PHPStreamServer\Core\WorkerInterface;
 
 /**
  * Base class for plugins.
  *
- * @template T of Process
+ * @template T of WorkerInterface
  */
 abstract class Plugin
 {
@@ -77,12 +77,12 @@ abstract class Plugin
     /**
      * Registers a worker with this plugin.
      *
-     * Called when the master registers a worker that declares this plugin in Process::handledBy().
+     * Called when the master registers a worker that declares this plugin in WorkerInterface::handledBy().
      * Depending on the plugin, this may configure, schedule, or start the worker.
      *
      * @param T $worker
      */
-    public function registerWorker(Process $worker): void
+    public function registerWorker(WorkerInterface $worker): void
     {
     }
 

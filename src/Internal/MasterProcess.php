@@ -18,8 +18,8 @@ use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\MessageBus\SocketFileMessageHandler;
 use PHPStreamServer\Core\Plugin\Plugin;
-use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\WorkerInterface;
 use Psr\Container\ContainerInterface as PsrContainerInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
 use Revolt\EventLoop;
@@ -27,6 +27,7 @@ use Revolt\EventLoop\Driver\StreamSelectDriver;
 use Revolt\EventLoop\Suspension;
 
 use function Amp\Future\await;
+use function PHPStreamServer\Core\generateWorkerId;
 use function PHPStreamServer\Core\getStartFile;
 use function PHPStreamServer\Core\isRunning;
 
@@ -52,7 +53,7 @@ final class MasterProcess
 
     /**
      * @param array<Plugin> $plugins
-     * @param array<Process> $workers
+     * @param array<WorkerInterface> $workers
      */
     public function __construct(
         private readonly string $pidFile,
@@ -123,7 +124,7 @@ final class MasterProcess
         $ret = $this->suspension->suspend();
 
         // Child process context
-        if ($ret instanceof Process) {
+        if ($ret instanceof WorkerInterface) {
             $this->free();
             exit($ret->run($this->workerContainer));
         }
@@ -183,10 +184,9 @@ final class MasterProcess
         });
 
         $this->messageHandler->subscribe(RegisterWorkerCommand::class, function (RegisterWorkerCommand $command): int {
-            $this->registerWorker($command->workerProcess);
+            $this->registerWorker($command->worker);
 
-            /** @psalm-suppress NoInterfaceProperties */
-            return $command->workerProcess->id ?? 0;
+            return $command->worker->getId();
         });
 
         $this->messageHandler->subscribe(UnregisterWorkerCommand::class, function (UnregisterWorkerCommand $command): void {
@@ -216,12 +216,14 @@ final class MasterProcess
         });
     }
 
-    private function registerWorker(Process ...$workers): void
+    private function registerWorker(WorkerInterface ...$workers): void
     {
-        /** @var array<class-string<Process>, class-string<Plugin>> $cannotBeRegistered */
+        /** @var array<class-string<WorkerInterface>, class-string<Plugin>> $cannotBeRegistered */
         $cannotBeRegistered = [];
 
         foreach ($workers as $worker) {
+            $worker->assignId(generateWorkerId());
+
             foreach ($worker::handledBy() as $handledByPluginClass) {
                 if (!isset($this->plugins[$handledByPluginClass])) {
                     $cannotBeRegistered[$worker::class] = $handledByPluginClass;
@@ -235,7 +237,7 @@ final class MasterProcess
         }
 
         foreach ($cannotBeRegistered as $workerClass => $handledByClass) {
-            $this->logger->error(\sprintf('Cannot register process "%s": required plugin "%s" is missing', $workerClass, $handledByClass));
+            $this->logger->error(\sprintf('Cannot register worker "%s": required plugin "%s" is missing', $workerClass, $handledByClass));
         }
     }
 

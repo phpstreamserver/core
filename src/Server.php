@@ -20,7 +20,7 @@ final class Server
     /** @var array<Plugin> */
     private array $plugins = [];
 
-    /** @var array<Process> */
+    /** @var array<WorkerInterface> */
     private array $workers = [];
 
     public function __construct(
@@ -36,7 +36,7 @@ final class Server
     }
 
     /**
-     * @template T of Process
+     * @template T of WorkerInterface
      * @param Plugin<T> ...$plugins
      */
     public function addPlugin(Plugin ...$plugins): self
@@ -46,7 +46,7 @@ final class Server
         return $this;
     }
 
-    public function addWorker(Process ...$workers): self
+    public function addWorker(WorkerInterface ...$workers): self
     {
         \array_push($this->workers, ...$workers);
 

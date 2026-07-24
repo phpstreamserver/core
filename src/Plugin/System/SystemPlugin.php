@@ -16,11 +16,14 @@ use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
 use PHPStreamServer\Core\Plugin\System\Status\ServerStatus;
-use PHPStreamServer\Core\Process;
+use PHPStreamServer\Core\WorkerInterface;
+
+use function PHPStreamServer\Core\getDriverName;
+use function PHPStreamServer\Core\getStartFile;
 
 /**
  * @internal
- * @extends Plugin<Process>
+ * @extends Plugin<WorkerInterface>
  */
 final class SystemPlugin extends Plugin
 {
@@ -36,7 +39,12 @@ final class SystemPlugin extends Plugin
 
     public function onStart(): void
     {
-        $serverStatus = new ServerStatus();
+        $serverStatus = new ServerStatus(
+            eventLoop: getDriverName(),
+            startFile: getStartFile(),
+            startedAt: new \DateTimeImmutable('now'),
+        );
+
         $connectionsStatus = new ConnectionsStatus();
 
         $this->masterContainer->setService(ServerStatus::class, $serverStatus);

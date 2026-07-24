@@ -8,9 +8,9 @@ use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Exception\ServerIsRunning;
 use PHPStreamServer\Core\Internal\MasterProcess;
-use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
-use PHPStreamServer\Core\Worker\WorkerProcess;
+use PHPStreamServer\Core\Worker\SupervisedWorker;
+use PHPStreamServer\Core\WorkerInterface;
 
 use function PHPStreamServer\Core\getDriverName;
 use function PHPStreamServer\Core\isRunning;
@@ -48,11 +48,11 @@ class StartCommand extends Command
         );
 
         /**
-         * @var array<WorkerProcess> $workers
+         * @var array<SupervisedWorker> $workers
          * @psalm-suppress UndefinedThisPropertyFetch, PossiblyNullFunctionCall
          */
         $workers = (fn(): array => $this->workers)->bindTo($masterProcess, $masterProcess)();
-        $workers = \array_filter(array: $workers, callback: static fn(Process $worker) => $worker instanceof WorkerProcess);
+        $workers = \array_filter(array: $workers, callback: static fn(WorkerInterface $worker) => $worker instanceof SupervisedWorker);
 
         $eventLoop = getDriverName();
 
@@ -76,7 +76,7 @@ class StartCommand extends Command
                     'Worker',
                     'Count',
                 ])
-                ->addRows(\array_map(static function (WorkerProcess $w): array {
+                ->addRows(\array_map(static function (SupervisedWorker $w): array {
                     return [
                         $w->getUser(),
                         $w->name,

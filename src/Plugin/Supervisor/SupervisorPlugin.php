@@ -12,13 +12,13 @@ use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\MetricsHandler;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\Supervisor;
-use PHPStreamServer\Core\Process;
-use PHPStreamServer\Core\Worker\WorkerProcess;
+use PHPStreamServer\Core\Worker\SupervisedWorker;
+use PHPStreamServer\Core\WorkerInterface;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
 use Revolt\EventLoop\Suspension;
 
 /**
- * @extends Plugin<WorkerProcess>
+ * @extends Plugin<SupervisedWorker>
  */
 final class SupervisorPlugin extends Plugin
 {
@@ -55,7 +55,7 @@ final class SupervisorPlugin extends Plugin
         }
     }
 
-    public function registerWorker(Process $worker): void
+    public function registerWorker(WorkerInterface $worker): void
     {
         $this->supervisor->registerWorker($worker);
     }

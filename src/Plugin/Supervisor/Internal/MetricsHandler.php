@@ -7,12 +7,14 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 use PHPStreamServer\Core\Message\ProcessExitEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Server;
-use PHPStreamServer\Core\Worker\WorkerProcess;
+use PHPStreamServer\Core\Worker\SupervisedWorker;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
 use Revolt\EventLoop;
 
 final readonly class MetricsHandler
 {
+    private const UPDATE_INTERVAL_SECONDS = SupervisedWorker::HEARTBEAT_PERIOD;
+
     public function __construct(RegistryInterface $registry, WorkerPool $pool, MessageHandlerInterface $handler)
     {
         $workersGauge = $registry->registerGauge(
@@ -48,7 +50,7 @@ final readonly class MetricsHandler
 
         $handler->subscribe(ProcessExitEvent::class, static function (ProcessExitEvent $message) use ($memoryGauge, $reloadsCounter, $crashesCounter): void {
             $memoryGauge->remove(['pid' => (string) $message->pid]);
-            if ($message->exitCode === WorkerProcess::RELOAD_EXIT_CODE) {
+            if ($message->exitCode === SupervisedWorker::RELOAD_EXIT_CODE) {
                 $reloadsCounter->inc();
             } elseif ($message->exitCode > 0) {
                 $crashesCounter->inc();
@@ -68,6 +70,6 @@ final readonly class MetricsHandler
         };
 
         EventLoop::unreference(EventLoop::delay(0.1, $heartbeat));
-        EventLoop::unreference(EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $heartbeat));
+        EventLoop::unreference(EventLoop::repeat(self::UPDATE_INTERVAL_SECONDS, $heartbeat));
     }
 }

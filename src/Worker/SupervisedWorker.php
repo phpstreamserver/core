@@ -20,16 +20,16 @@ use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\ReloadStrategyStack;
 use PHPStreamServer\Core\Plugin\Supervisor\SupervisorPlugin;
-use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\ReloadStrategy\ReloadStrategy;
 use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\WorkerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\DriverFactory;
 
 use function PHPStreamServer\Core\getCurrentGroup;
 use function PHPStreamServer\Core\getCurrentUser;
 
-class WorkerProcess implements Process
+class SupervisedWorker implements WorkerInterface
 {
     use ProcessUserChange;
 
@@ -123,7 +123,7 @@ class WorkerProcess implements Process
     {
         // Some command-line SAPIs (e.g., phpdbg) do not provide this function
         if (\function_exists('cli_set_process_title')) {
-            \cli_set_process_title(\sprintf('%s: worker process  %s', Server::NAME, $this->name));
+            \cli_set_process_title(\sprintf('%s: %s', Server::NAME, $this->name));
         }
 
         EventLoop::setDriver((new DriverFactory())->create());
@@ -214,6 +214,11 @@ class WorkerProcess implements Process
     public static function handledBy(): array
     {
         return [SupervisorPlugin::class];
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
     }
 
     public function getPid(): int

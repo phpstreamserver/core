@@ -8,7 +8,7 @@ use PHPStreamServer\Core\Message\ProcessDetachedEvent;
 
 use function PHPStreamServer\Core\getAbsoluteBinaryPath;
 
-final class ExternalProcess extends WorkerProcess
+final class ExecutableWorker extends SupervisedWorker
 {
     private readonly string $command;
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Console;
 
 use PHPStreamServer\Core\Plugin\Plugin;
-use PHPStreamServer\Core\Process;
+use PHPStreamServer\Core\WorkerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Driver;
 
@@ -14,7 +14,7 @@ abstract class Command
     /**
      * @readonly
      * @internal
-     * @var \WeakMap<Driver, array{plugins: array<Plugin>, workers: array<Process>, options: Options}>
+     * @var \WeakMap<Driver, array{plugins: array<Plugin>, workers: array<WorkerInterface>, options: Options}>
      */
     public \WeakMap $map;
 
@@ -27,7 +27,7 @@ abstract class Command
     }
 
     /**
-     * @return array<Process>
+     * @return array<WorkerInterface>
      */
     final protected function getWorkers(): array
     {

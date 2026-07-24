@@ -10,8 +10,8 @@ use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Exception\ServerIsNotRunning;
 use PHPStreamServer\Core\Exception\ServerIsRunning;
 use PHPStreamServer\Core\Plugin\Plugin;
-use PHPStreamServer\Core\Process;
 use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\WorkerInterface;
 use Revolt\EventLoop;
 
 use function PHPStreamServer\Core\getStartFile;
@@ -27,7 +27,7 @@ final readonly class App
 
     /**
      * @param array<Plugin> $plugins
-     * @param array<Process> $workers
+     * @param array<WorkerInterface> $workers
      * @psalm-suppress UndefinedVariable, PossiblyUndefinedVariable
      */
     public function run(array &$plugins, array &$workers): int

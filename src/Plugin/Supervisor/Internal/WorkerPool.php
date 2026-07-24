@@ -11,7 +11,7 @@ use PHPStreamServer\Core\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
 use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;
-use PHPStreamServer\Core\Worker\WorkerProcess;
+use PHPStreamServer\Core\Worker\SupervisedWorker;
 use Revolt\EventLoop;
 
 use function PHPStreamServer\Core\getMemoryUsageByPid;
@@ -25,7 +25,7 @@ final class WorkerPool
     public const BLOCK_WARNING_THRESHOLD_SECONDS = 6;
 
     /**
-     * @var array<int, WorkerProcess>
+     * @var array<int, SupervisedWorker>
      */
     private array $workersById = [];
 
@@ -89,11 +89,11 @@ final class WorkerPool
                 }
             };
 
-            EventLoop::unreference(EventLoop::repeat(WorkerProcess::HEARTBEAT_PERIOD, $checkMemoryUsageClosure));
+            EventLoop::unreference(EventLoop::repeat(SupervisedWorker::HEARTBEAT_PERIOD, $checkMemoryUsageClosure));
         });
     }
 
-    public function addWorker(WorkerProcess $worker): WorkerInfo
+    public function addWorker(SupervisedWorker $worker): WorkerInfo
     {
         $this->workersById[$worker->id] = $worker;
 
@@ -168,7 +168,7 @@ final class WorkerPool
         }
     }
 
-    public function getWorkerProcessById(int $workerId): WorkerProcess|null
+    public function getWorkerById(int $workerId): SupervisedWorker|null
     {
         return $this->workersById[$workerId] ?? null;
     }

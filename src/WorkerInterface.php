@@ -8,8 +8,13 @@ use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 
-interface Process
+interface WorkerInterface
 {
+    /**
+     * @internal
+     */
+    public function assignId(int $id): void;
+
     /**
      * @internal
      */
@@ -19,6 +24,8 @@ interface Process
      * @return list<class-string<Plugin>>
      */
     public static function handledBy(): array;
+
+    public function getId(): int;
 
     public function getPid(): int;
 
