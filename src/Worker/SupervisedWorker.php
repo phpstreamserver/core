@@ -7,8 +7,9 @@ namespace PHPStreamServer\Core\Worker;
 use Amp\DeferredFuture;
 use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
-use PHPStreamServer\Core\Exception\UserChangeException;
+use PHPStreamServer\Core\Exception\ProcessIdentityException;
 use PHPStreamServer\Core\Internal\ErrorHandler;
+use PHPStreamServer\Core\Internal\ProcessIdentity;
 use PHPStreamServer\Core\Internal\Status;
 use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\Message\CompositeMessage;
@@ -24,10 +25,6 @@ use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\WorkerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\DriverFactory;
-
-use function PHPStreamServer\Core\getCurrentGroup;
-use function PHPStreamServer\Core\getCurrentUser;
-use function PHPStreamServer\Core\setUserAndGroup;
 
 class SupervisedWorker implements WorkerInterface
 {
@@ -134,8 +131,8 @@ class SupervisedWorker implements WorkerInterface
         $this->bus = $workerContainer->getService(MessageBusInterface::class);
 
         try {
-            setUserAndGroup($this->user, $this->group);
-        } catch (UserChangeException $e) {
+            ProcessIdentity::switchTo($this->user, $this->group);
+        } catch (ProcessIdentityException $e) {
             $this->logger->error(\sprintf('Worker "%s" failed to change process identity: %s', $this->name, $e->getMessage()));
         }
 
@@ -231,12 +228,12 @@ class SupervisedWorker implements WorkerInterface
 
     final public function getUser(): string
     {
-        return $this->user ?? getCurrentUser();
+        return $this->user ?? ProcessIdentity::getEffectiveUser();
     }
 
     final public function getGroup(): string
     {
-        return $this->group ?? getCurrentGroup();
+        return $this->group ?? ProcessIdentity::getEffectiveGroup();
     }
 
     public function getContainer(): ContainerInterface

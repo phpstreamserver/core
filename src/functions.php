@@ -6,7 +6,6 @@ namespace PHPStreamServer\Core;
 
 use Amp\Socket\Socket;
 use Amp\Socket\SocketException;
-use PHPStreamServer\Core\Exception\UserChangeException;
 use Revolt\EventLoop\DriverFactory;
 
 function getStartFile(): string
@@ -18,67 +17,6 @@ function getStartFile(): string
         $file = \end($backtrace)['file'];
     }
     return $file;
-}
-
-function getCurrentUser(): string
-{
-    return (\posix_getpwuid(\posix_geteuid()) ?: [])['name'] ?? (string) \posix_geteuid();
-}
-
-function getCurrentGroup(): string
-{
-    return (\posix_getgrgid(\posix_getegid()) ?: [])['name'] ?? (string) \posix_getegid();
-}
-
-/**
- * @internal
- * @throws UserChangeException
- */
-function setUserAndGroup(string|null $user = null, string|null $group = null): void
-{
-    if ($user === null && $group === null) {
-        return;
-    }
-
-    $user ??= getCurrentUser();
-
-    $userInfo = \ctype_digit($user) ? \posix_getpwuid((int) $user) : \posix_getpwnam($user);
-    if ($userInfo === false) {
-        throw new UserChangeException(\sprintf('User "%s" does not exist', $user));
-    }
-
-    $uid = $userInfo['uid'];
-    $uname = $userInfo['name'];
-
-    if ($group === null) {
-        $gid = $userInfo['gid'];
-    } else {
-        $groupInfo = \ctype_digit($group) ? \posix_getgrgid((int) $group) : \posix_getgrnam($group);
-        if ($groupInfo === false) {
-            throw new UserChangeException(\sprintf('Group "%s" does not exist', $group));
-        }
-        $gid = $groupInfo['gid'];
-    }
-
-    if ($uid === \posix_geteuid() && $gid === \posix_getegid()) {
-        return;
-    }
-
-    if (\posix_geteuid() !== 0) {
-        throw new UserChangeException('You must have root privileges to change the user and group');
-    }
-
-    if (!\posix_setgid($gid)) {
-        throw new UserChangeException(\sprintf('Changing GID to %d failed: %s', $gid, \posix_strerror(\posix_get_last_error())));
-    }
-
-    if (!\posix_initgroups($uname, $gid)) {
-        throw new UserChangeException(\sprintf('Initializing supplementary groups for user "%s" failed: %s', $uname, \posix_strerror(\posix_get_last_error())));
-    }
-
-    if (!\posix_setuid($uid)) {
-        throw new UserChangeException(\sprintf('Changing UID to %d failed: %s', $uid, \posix_strerror(\posix_get_last_error())));
-    }
 }
 
 function humanFileSize(int $bytes): string
