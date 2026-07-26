@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System;
 
-use PHPStreamServer\Core\Command\GetConnectionsStatusCommand;
+use PHPStreamServer\Core\Command\GetProcessNetworkInfoCommand;
 use PHPStreamServer\Core\Command\GetServerStatusCommand;
 use PHPStreamServer\Core\ConsoleCommand\ConnectionsCommand;
 use PHPStreamServer\Core\ConsoleCommand\ReloadCommand;
@@ -42,20 +42,17 @@ final class SystemPlugin extends Plugin
             startedAt: new \DateTimeImmutable('now'),
         );
 
-        $connectionsStatus = new ConnectionsStatus();
-
-        $this->masterContainer->setService(ServerStatus::class, $serverStatus);
-        $this->masterContainer->setService(ConnectionsStatus::class, $connectionsStatus);
-
         $handler = $this->masterContainer->getService(MessageHandlerInterface::class);
-        $connectionsStatus->subscribeToWorkerMessages($handler);
+
+        $networkTrafficTracker = new NetworkTrafficTracker();
+        $networkTrafficTracker->subscribeToWorkerMessages($handler);
 
         $handler->subscribe(GetServerStatusCommand::class, static function () use ($serverStatus): ServerStatus {
             return $serverStatus;
         });
 
-        $handler->subscribe(GetConnectionsStatusCommand::class, static function () use ($connectionsStatus): ConnectionsStatus {
-            return $connectionsStatus;
+        $handler->subscribe(GetProcessNetworkInfoCommand::class, static function () use ($networkTrafficTracker): array {
+            return $networkTrafficTracker->getProcessNetworkInfos();
         });
     }
 

@@ -15,9 +15,9 @@ use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;
 use PHPStreamServer\Core\Plugin\System\ServerStatus;
 use PHPStreamServer\Core\Server;
 
+use function PHPStreamServer\Core\formatFileSize;
 use function PHPStreamServer\Core\getDriverName;
 use function PHPStreamServer\Core\getStartFile;
-use function PHPStreamServer\Core\humanFileSize;
 use function PHPStreamServer\Core\isRunning;
 
 class StatusCommand extends Command
@@ -78,7 +78,7 @@ class StatusCommand extends Command
             $rows = [...$rows, ...[
                 ['Worker count:', $workersCount],
                 ['Process count:', $processesCount],
-                ['Memory usage:', humanFileSize($totalMemory)],
+                ['Memory usage:', formatFileSize($totalMemory)],
             ]];
         }
 

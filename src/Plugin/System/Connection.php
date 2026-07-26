@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Plugin\System\Connection;
+namespace PHPStreamServer\Core\Plugin\System;
 
 final class Connection
 {

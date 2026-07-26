@@ -9,14 +9,13 @@ use PHPStreamServer\Core\Event\ProcessExitEvent;
 use PHPStreamServer\Core\Event\ProcessReplacedEvent;
 use PHPStreamServer\Core\Event\ProcessSpawnedEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
-use PHPStreamServer\Core\Plugin\System\Connection\Connection;
 
-final class ConnectionsStatus
+final class NetworkTrafficTracker
 {
     /**
-     * @var array<int, ProcessConnectionsInfo>
+     * @var array<int, ProcessNetworkInfo>
      */
-    private array $processConnections = [];
+    private array $processNetworkInfos = [];
 
     public function __construct()
     {
@@ -24,11 +23,12 @@ final class ConnectionsStatus
 
     public function subscribeToWorkerMessages(MessageHandlerInterface $handler): void
     {
-        $processConnections = &$this->processConnections;
+        $processConnections = &$this->processNetworkInfos;
 
         $handler->subscribe(ProcessSpawnedEvent::class, static function (ProcessSpawnedEvent $message) use (&$processConnections): void {
-            $processConnections[$message->pid] = new ProcessConnectionsInfo(
+            $processConnections[$message->pid] = new ProcessNetworkInfo(
                 pid: $message->pid,
+                name: $message->name,
             );
         });
 
@@ -73,17 +73,9 @@ final class ConnectionsStatus
         });
     }
 
-    /**
-     * @return list<ProcessConnectionsInfo>
-     */
-    public function getAllProcessConnectionsInfo(): array
+    public function getProcessNetworkInfos(): array
     {
-        return \array_values($this->processConnections);
-    }
-
-    public function getProcessConnectionsInfo(int $pid): ProcessConnectionsInfo
-    {
-        return $this->processConnections[$pid] ?? new ProcessConnectionsInfo(pid: $pid);
+        return $this->processNetworkInfos;
     }
 
     /**
@@ -91,6 +83,6 @@ final class ConnectionsStatus
      */
     public function getActiveConnections(): array
     {
-        return \array_merge(...\array_map(static fn(ProcessConnectionsInfo $p) => $p->connections, $this->processConnections));
+        return \array_merge(...\array_map(static fn(ProcessNetworkInfo $p) => $p->connections, $this->processNetworkInfos));
     }
 }

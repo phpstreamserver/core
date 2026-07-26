@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System;
 
-use PHPStreamServer\Core\Plugin\System\Connection\Connection;
-
-final class ProcessConnectionsInfo
+final class ProcessNetworkInfo
 {
     /**
      * @param array<int, Connection> $connections
      */
     public function __construct(
         public readonly int $pid,
+        public readonly string $name,
         public int $requests = 0,
         public int $rx = 0,
         public int $tx = 0,

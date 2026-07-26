@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Event;
 
 use PHPStreamServer\Core\MessageBus\MessageInterface;
-use PHPStreamServer\Core\Plugin\System\Connection\Connection;
+use PHPStreamServer\Core\Plugin\System\Connection;
 
 /**
  * @implements MessageInterface<null>

@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\ConsoleCommand;
 
-use PHPStreamServer\Core\Command\GetConnectionsStatusCommand;
+use PHPStreamServer\Core\Command\GetProcessNetworkInfoCommand;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
-use PHPStreamServer\Core\Plugin\System\Connection\Connection;
-use PHPStreamServer\Core\Plugin\System\ConnectionsStatus;
+use PHPStreamServer\Core\Plugin\System\Connection;
 
-use function PHPStreamServer\Core\humanFileSize;
+use function PHPStreamServer\Core\formatDuration;
+use function PHPStreamServer\Core\formatFileSize;
 
 class ConnectionsCommand extends Command
 {
@@ -29,9 +29,17 @@ class ConnectionsCommand extends Command
     {
         $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
 
-        $connectionsStatus = $bus->dispatch(new GetConnectionsStatusCommand())->await();
-        \assert($connectionsStatus instanceof ConnectionsStatus);
-        $connections = $connectionsStatus->getActiveConnections();
+        $processNetworkInfos = $bus->dispatch(new GetProcessNetworkInfoCommand())->await();
+
+        $processNamesByPids = [];
+        $connections = [];
+
+        foreach ($processNetworkInfos as $processNetworkInfo) {
+            $processNamesByPids[$processNetworkInfo->pid] = $processNetworkInfo->name;
+            foreach ($processNetworkInfo->connections as $connection) {
+                $connections[] = $connection;
+            }
+        }
 
         echo "❯ Connections\n";
 
@@ -39,16 +47,20 @@ class ConnectionsCommand extends Command
             echo (new Table(indent: 1))
                 ->setHeaderRow([
                     'PID',
+                    'Worker',
                     'Local address',
                     'Remote address',
+                    'Age',
                     'Bytes (RX / TX)',
                 ])
-                ->addRows(\array_map(array: $connections, callback: static function (Connection $c): array {
+                ->addRows(\array_map(array: $connections, callback: static function (Connection $connection) use ($processNamesByPids): array {
                     return [
-                        $c->pid,
-                        $c->localIp . ':' . $c->localPort,
-                        $c->remoteIp . ':' . $c->remotePort,
-                        \sprintf('(%s / %s)', humanFileSize($c->rx), humanFileSize($c->tx)),
+                        $connection->pid,
+                        $processNamesByPids[$connection->pid],
+                        self::formatAddress($connection->localIp, $connection->localPort),
+                        self::formatAddress($connection->remoteIp, $connection->remotePort),
+                        formatDuration($connection->connectedAt),
+                        \sprintf('(%s / %s)', formatFileSize($connection->rx), formatFileSize($connection->tx)),
                     ];
                 }));
         } else {
@@ -56,5 +68,10 @@ class ConnectionsCommand extends Command
         }
 
         return 0;
+    }
+
+    private static function formatAddress(string $ip, string $port): string
+    {
+        return \str_contains($ip, ':') ? \sprintf('[%s]:%s', $ip, $port) : \sprintf('%s:%s', $ip, $port);
     }
 }

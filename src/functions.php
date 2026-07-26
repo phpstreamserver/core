@@ -19,7 +19,7 @@ function getStartFile(): string
     return $file;
 }
 
-function humanFileSize(int $bytes): string
+function formatFileSize(int $bytes): string
 {
     if ($bytes < 1024) {
         return "$bytes B";
@@ -38,6 +38,21 @@ function humanFileSize(int $bytes): string
     }
     $bytes = \round($bytes / 1024, 1);
     return "$bytes TiB";
+}
+
+function formatDuration(\DateTimeInterface $startedAt): string
+{
+    $seconds = \max(0, \time() - $startedAt->getTimestamp());
+    $days = \intdiv($seconds, 86400);
+    $hours = \intdiv($seconds % 86400, 3600);
+    $minutes = \intdiv($seconds % 3600, 60);
+
+    return match (true) {
+        $seconds < 60 => \sprintf('%ds', $seconds),
+        $days > 0 => \sprintf('%dd %dh %dm', $days, $hours, $minutes),
+        $hours > 0 => \sprintf('%dh %dm', $hours, $minutes),
+        default => \sprintf('%dm', $minutes),
+    };
 }
 
 function reportErrors(): bool

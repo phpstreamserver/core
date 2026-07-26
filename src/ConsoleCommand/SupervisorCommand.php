@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\ConsoleCommand;
 
-use PHPStreamServer\Core\Command\GetConnectionsStatusCommand;
 use PHPStreamServer\Core\Command\GetProcessesCommand;
+use PHPStreamServer\Core\Command\GetProcessNetworkInfoCommand;
 use PHPStreamServer\Core\Command\GetWorkersCommand;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
 use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
 use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;
+use PHPStreamServer\Core\Plugin\System\ProcessNetworkInfo;
 
-use function PHPStreamServer\Core\humanFileSize;
+use function PHPStreamServer\Core\formatDuration;
+use function PHPStreamServer\Core\formatFileSize;
 
 class SupervisorCommand extends Command
 {
@@ -33,7 +35,7 @@ class SupervisorCommand extends Command
 
         $workers = $bus->dispatch(new GetWorkersCommand())->await();
         $processes = $bus->dispatch(new GetProcessesCommand())->await();
-        $connectionsStatus = $bus->dispatch(new GetConnectionsStatusCommand())->await();
+        $processNetworkInfos = $bus->dispatch(new GetProcessNetworkInfoCommand())->await();
 
         echo "❯ Workers\n";
 
@@ -70,21 +72,28 @@ class SupervisorCommand extends Command
                     'Bytes (RX / TX)',
                     'Status',
                 ])
-                ->addRows(\array_map(array: $processes, callback: static function (ProcessInfo $p) use ($connectionsStatus): array {
-                    $c = $connectionsStatus->getProcessConnectionsInfo($p->pid);
+                ->addRows(\array_map(array: $processes, callback: static function (ProcessInfo $p) use ($processNetworkInfos): array {
+                    /** @var ProcessNetworkInfo|null $processNetworkInfo */
+                    $processNetworkInfo = $processNetworkInfos[$p->pid] ?? null;
+                    $requestCount = $processNetworkInfo !== null ? $processNetworkInfo->requests : 0;
+                    $connectionCount = $processNetworkInfo !== null ? \count($processNetworkInfo->connections) : 0;
+                    $rx = $processNetworkInfo !== null ? $processNetworkInfo->rx : 0;
+                    $tx = $processNetworkInfo !== null ? $processNetworkInfo->tx : 0;
 
                     return [
                         $p->pid,
                         $p->user === 'root' ? $p->user : "<color;fg=gray>{$p->user}</>",
                         $p->name,
-                        self::formatUptime($p->startedAt),
-                        $p->memory > 0 ? humanFileSize($p->memory) : '<color;fg=gray>??</>',
-                        $p->external ? '<color;fg=gray>-</>' : (\count($c->connections) === 0 ? '<color;fg=gray>0</>' : \count($c->connections)),
-                        $p->external ? '<color;fg=gray>-</>' : ($c->requests === 0 ? '<color;fg=gray>0</>' : $c->requests),
-                        $p->external ? '<color;fg=gray>-</>' : (
-                            $c->rx === 0 && $c->tx === 0
-                                ? \sprintf('<color;fg=gray>(%s / %s)</>', humanFileSize($c->rx), humanFileSize($c->tx))
-                                : \sprintf('(%s / %s)', humanFileSize($c->rx), humanFileSize($c->tx))
+                        formatDuration($p->startedAt),
+                        $p->memory > 0 ? formatFileSize($p->memory) : '<color;fg=gray>??</>',
+                        $processNetworkInfo === null ? '<color;fg=gray>-</>' : (
+                            $connectionCount === 0 ? '<color;fg=gray>0</>' : $connectionCount
+                        ),
+                        $processNetworkInfo === null ? '<color;fg=gray>-</>' : (
+                            $requestCount === 0 ? '<color;fg=gray>0</>' : $requestCount
+                        ),
+                        $processNetworkInfo === null ? '<color;fg=gray>-</>' : (
+                            $rx === 0 && $tx === 0 ? \sprintf('<color;fg=gray>(%s / %s)</>', formatFileSize($rx), formatFileSize($tx)) : \sprintf('(%s / %s)', formatFileSize($rx), formatFileSize($tx))
                         ),
                         match (true) {
                             $p->blocked => '[<color;fg=yellow>BLOCKED</>]',
@@ -96,21 +105,6 @@ class SupervisorCommand extends Command
             echo "  <color;bg=yellow> ! </> <color;fg=yellow>There are no running processes</>\n";
         }
 
-
         return 0;
-    }
-
-    private static function formatUptime(\DateTimeInterface $startedAt): string
-    {
-        $seconds = \max(0, \time() - $startedAt->getTimestamp());
-        $days = \intdiv($seconds, 86400);
-        $hours = \intdiv($seconds % 86400, 3600);
-        $minutes = \intdiv($seconds % 3600, 60);
-
-        return match (true) {
-            $days > 0 => \sprintf('%dd %dh %dm', $days, $hours, $minutes),
-            $hours > 0 => \sprintf('%dh %dm', $hours, $minutes),
-            default => \sprintf('%dm', $minutes),
-        };
     }
 }
