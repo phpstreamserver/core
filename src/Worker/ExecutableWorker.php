@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Worker;
 
-use PHPStreamServer\Core\Message\ProcessDetachedEvent;
+use PHPStreamServer\Core\Event\ProcessDetachedEvent;
 
 use function PHPStreamServer\Core\getAbsoluteBinaryPath;
 

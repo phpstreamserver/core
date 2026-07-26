@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal;
 
+use PHPStreamServer\Core\Command\RegisterWorkerCommand;
+use PHPStreamServer\Core\Command\ReloadServerCommand;
+use PHPStreamServer\Core\Command\StopServerCommand;
+use PHPStreamServer\Core\Command\UnregisterWorkerCommand;
 use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\Console\StdoutHandler;
-use PHPStreamServer\Core\Logger\ConsoleLogger;
-use PHPStreamServer\Core\Logger\LoggerInterface;
-use PHPStreamServer\Core\Message\RegisterWorkerCommand;
-use PHPStreamServer\Core\Message\ReloadServerCommand;
-use PHPStreamServer\Core\Message\StopServerCommand;
-use PHPStreamServer\Core\Message\UnregisterWorkerCommand;
+use PHPStreamServer\Core\Internal\Logger\ConsoleLogger;
+use PHPStreamServer\Core\Internal\MessageBus\SocketFileMessageBus;
+use PHPStreamServer\Core\Internal\MessageBus\SocketFileMessageHandler;
+use PHPStreamServer\Core\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
-use PHPStreamServer\Core\MessageBus\SocketFileMessageBus;
-use PHPStreamServer\Core\MessageBus\SocketFileMessageHandler;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\WorkerInterface;

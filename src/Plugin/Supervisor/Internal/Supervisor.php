@@ -6,13 +6,13 @@ namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Future;
+use PHPStreamServer\Core\Command\GetProcessesCommand;
+use PHPStreamServer\Core\Command\GetWorkersCommand;
+use PHPStreamServer\Core\Event\ProcessBlockedEvent;
+use PHPStreamServer\Core\Event\ProcessExitEvent;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\SIGCHLDHandler;
 use PHPStreamServer\Core\Internal\Status;
-use PHPStreamServer\Core\Message\GetProcessesCommand;
-use PHPStreamServer\Core\Message\GetWorkersCommand;
-use PHPStreamServer\Core\Message\ProcessBlockedEvent;
-use PHPStreamServer\Core\Message\ProcessExitEvent;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;

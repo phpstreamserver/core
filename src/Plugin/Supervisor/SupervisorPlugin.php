@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\Supervisor;
 
 use Amp\Future;
-use PHPStreamServer\Core\Command\ProcessesCommand;
-use PHPStreamServer\Core\Logger\LoggerInterface;
+use PHPStreamServer\Core\ConsoleCommand\ProcessesCommand;
+use PHPStreamServer\Core\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;

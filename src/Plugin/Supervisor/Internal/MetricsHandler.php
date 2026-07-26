@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
-use PHPStreamServer\Core\Message\ProcessExitEvent;
+use PHPStreamServer\Core\Event\ProcessExitEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Worker\SupervisedWorker;

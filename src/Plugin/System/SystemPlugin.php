@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System;
 
-use PHPStreamServer\Core\Command\ConnectionsCommand;
-use PHPStreamServer\Core\Command\ReloadCommand;
-use PHPStreamServer\Core\Command\StartCommand;
-use PHPStreamServer\Core\Command\StatusCommand;
-use PHPStreamServer\Core\Command\StopCommand;
-use PHPStreamServer\Core\Command\WorkersCommand;
-use PHPStreamServer\Core\Message\GetConnectionsStatusCommand;
-use PHPStreamServer\Core\Message\GetServerStatusCommand;
+use PHPStreamServer\Core\Command\GetConnectionsStatusCommand;
+use PHPStreamServer\Core\Command\GetServerStatusCommand;
+use PHPStreamServer\Core\ConsoleCommand\ConnectionsCommand;
+use PHPStreamServer\Core\ConsoleCommand\ReloadCommand;
+use PHPStreamServer\Core\ConsoleCommand\StartCommand;
+use PHPStreamServer\Core\ConsoleCommand\StatusCommand;
+use PHPStreamServer\Core\ConsoleCommand\StopCommand;
+use PHPStreamServer\Core\ConsoleCommand\WorkersCommand;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
-use PHPStreamServer\Core\Plugin\System\Connections\ConnectionsStatus;
-use PHPStreamServer\Core\Plugin\System\Status\ServerStatus;
 use PHPStreamServer\Core\WorkerInterface;
 
 use function PHPStreamServer\Core\getDriverName;

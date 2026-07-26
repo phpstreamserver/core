@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
+use PHPStreamServer\Core\Event\ProcessBlockedEvent;
+use PHPStreamServer\Core\Event\ProcessDetachedEvent;
+use PHPStreamServer\Core\Event\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
-use PHPStreamServer\Core\Message\ProcessBlockedEvent;
-use PHPStreamServer\Core\Message\ProcessDetachedEvent;
-use PHPStreamServer\Core\Message\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
 use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;

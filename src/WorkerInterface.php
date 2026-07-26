@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core;
 
-use PHPStreamServer\Core\Logger\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 

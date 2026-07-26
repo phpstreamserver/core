@@ -6,6 +6,7 @@ namespace PHPStreamServer\Core\MessageBus;
 
 use Amp\Future;
 use PHPStreamServer\Core\Exception\ServerIsNotRunning;
+use PHPStreamServer\Core\Internal\MessageBus\SocketFileMessageBus;
 
 use function PHPStreamServer\Core\isRunning;
 
