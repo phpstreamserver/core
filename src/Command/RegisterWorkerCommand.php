@@ -7,7 +7,6 @@ namespace PHPStreamServer\Core\Command;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 use PHPStreamServer\Core\WorkerInterface;
-use PHPStreamServer\Symfony\Worker\SymfonyHttpServerWorker;
 
 use function Opis\Closure\serialize as opisSerialize;
 use function Opis\Closure\unserialize as opisUnserialize;
@@ -25,8 +24,8 @@ final readonly class RegisterWorkerCommand implements MessageInterface
 
     public function __serialize(): array
     {
-        if ($this->worker::class === SymfonyHttpServerWorker::class) {
-            throw new PHPStreamServerException(\sprintf('%s cannot be registered through the message bus', SymfonyHttpServerWorker::class));
+        if (!$this->worker->isSerializable()) {
+            throw new PHPStreamServerException(\sprintf('%s cannot be registered through the message bus', $this->worker::class));
         }
 
         return ['worker' => opisSerialize($this->worker)];

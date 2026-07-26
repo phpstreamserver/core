@@ -39,4 +39,6 @@ interface WorkerInterface
     public function getMessageBus(): MessageBusInterface;
 
     public function getLogger(): LoggerInterface;
+
+    public function isSerializable(): bool;
 }

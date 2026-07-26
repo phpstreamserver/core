@@ -324,4 +324,9 @@ class SupervisedWorker implements WorkerInterface
         $this->onReloadCallbacks[$priority . ':' . \uniqid()] = $onReload;
         \ksort($this->onReloadCallbacks, SORT_NUMERIC);
     }
+
+    public function isSerializable(): bool
+    {
+        return true;
+    }
 }
