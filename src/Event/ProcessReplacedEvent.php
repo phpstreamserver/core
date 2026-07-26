@@ -9,7 +9,7 @@ use PHPStreamServer\Core\MessageBus\MessageInterface;
 /**
  * @implements MessageInterface<null>
  */
-final readonly class ProcessDetachedEvent implements MessageInterface
+final readonly class ProcessReplacedEvent implements MessageInterface
 {
     public function __construct(
         public int $pid,

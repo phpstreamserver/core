@@ -11,7 +11,6 @@ use PHPStreamServer\Core\ConsoleCommand\ReloadCommand;
 use PHPStreamServer\Core\ConsoleCommand\StartCommand;
 use PHPStreamServer\Core\ConsoleCommand\StatusCommand;
 use PHPStreamServer\Core\ConsoleCommand\StopCommand;
-use PHPStreamServer\Core\ConsoleCommand\WorkersCommand;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\WorkerInterface;
@@ -67,7 +66,6 @@ final class SystemPlugin extends Plugin
             new StopCommand(),
             new ReloadCommand(),
             new StatusCommand(),
-            new WorkersCommand(),
             new ConnectionsCommand(),
         ];
     }

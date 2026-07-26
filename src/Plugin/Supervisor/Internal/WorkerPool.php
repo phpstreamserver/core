@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\Supervisor\Internal;
 
 use PHPStreamServer\Core\Event\ProcessBlockedEvent;
-use PHPStreamServer\Core\Event\ProcessDetachedEvent;
 use PHPStreamServer\Core\Event\ProcessHeartbeatEvent;
+use PHPStreamServer\Core\Event\ProcessReplacedEvent;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
@@ -48,7 +48,7 @@ final class WorkerPool
         $processInfosByPid = &$this->processInfosByPid;
 
         $handler->subscribe(ProcessHeartbeatEvent::class, static function (ProcessHeartbeatEvent $message) use (&$processInfosByPid): void {
-            if (!\array_key_exists($message->pid, $processInfosByPid) || $processInfosByPid[$message->pid]->detached === true) {
+            if (!\array_key_exists($message->pid, $processInfosByPid) || $processInfosByPid[$message->pid]->external === true) {
                 return;
             }
 
@@ -58,7 +58,7 @@ final class WorkerPool
         });
 
         $handler->subscribe(ProcessBlockedEvent::class, static function (ProcessBlockedEvent $message) use (&$processInfosByPid): void {
-            if (!\array_key_exists($message->pid, $processInfosByPid) || $processInfosByPid[$message->pid]->detached === true) {
+            if (!\array_key_exists($message->pid, $processInfosByPid) || $processInfosByPid[$message->pid]->external === true) {
                 return;
             }
 
@@ -72,12 +72,12 @@ final class WorkerPool
             }));
         });
 
-        $handler->subscribe(ProcessDetachedEvent::class, static function (ProcessDetachedEvent $message) use (&$processInfosByPid): void {
+        $handler->subscribe(ProcessReplacedEvent::class, static function (ProcessReplacedEvent $message) use (&$processInfosByPid): void {
             if (!\array_key_exists($message->pid, $processInfosByPid)) {
                 return;
             }
 
-            $processInfosByPid[$message->pid]->detached = true;
+            $processInfosByPid[$message->pid]->external = true;
             $processInfosByPid[$message->pid]->blocked = false;
 
             $pid = $message->pid;

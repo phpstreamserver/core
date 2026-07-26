@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\Supervisor;
 
 use Amp\Future;
-use PHPStreamServer\Core\ConsoleCommand\ProcessesCommand;
+use PHPStreamServer\Core\ConsoleCommand\SupervisorCommand;
 use PHPStreamServer\Core\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
@@ -78,7 +78,7 @@ final class SupervisorPlugin extends Plugin
     public function registerCommands(): iterable
     {
         return [
-            new ProcessesCommand(),
+            new SupervisorCommand(),
         ];
     }
 }

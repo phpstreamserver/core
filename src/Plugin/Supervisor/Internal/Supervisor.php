@@ -100,7 +100,7 @@ final class Supervisor
     {
         foreach ($this->pool->getProcessInfos() as $processInfo) {
             if ($processInfo->reloadable) {
-                \posix_kill($processInfo->pid, $processInfo->detached ? SIGTERM : SIGUSR1);
+                \posix_kill($processInfo->pid, $processInfo->external ? SIGTERM : SIGUSR1);
             }
         }
     }
@@ -178,7 +178,7 @@ final class Supervisor
     private function monitorWorkerStatus(): void
     {
         foreach ($this->pool->getProcessInfos() as $processInfo) {
-            $blockTime = $processInfo->detached ? 0 : (int) \round((\hrtime(true) - $processInfo->heartbeatTime) * 1e-9);
+            $blockTime = $processInfo->external ? 0 : (int) \round((\hrtime(true) - $processInfo->heartbeatTime) * 1e-9);
             if ($processInfo->blocked === false && $blockTime > $this->pool::BLOCK_WARNING_THRESHOLD_SECONDS) {
                 $worker = $this->pool->getWorkerInfoByPid($processInfo->pid);
                 $this->pool->markAsBlocked($processInfo->pid);

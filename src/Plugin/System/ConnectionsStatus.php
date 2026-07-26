@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\System;
 
 use PHPStreamServer\Core\Event\NetworkTrafficDeltaEvent;
-use PHPStreamServer\Core\Event\ProcessDetachedEvent;
 use PHPStreamServer\Core\Event\ProcessExitEvent;
+use PHPStreamServer\Core\Event\ProcessReplacedEvent;
 use PHPStreamServer\Core\Event\ProcessSpawnedEvent;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\System\Connection\Connection;
@@ -36,7 +36,7 @@ final class ConnectionsStatus
             unset($processConnections[$message->pid]);
         });
 
-        $handler->subscribe(ProcessDetachedEvent::class, static function (ProcessDetachedEvent $message) use (&$processConnections): void {
+        $handler->subscribe(ProcessReplacedEvent::class, static function (ProcessReplacedEvent $message) use (&$processConnections): void {
             unset($processConnections[$message->pid]);
         });
 

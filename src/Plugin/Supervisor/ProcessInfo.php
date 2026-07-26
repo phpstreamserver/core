@@ -14,7 +14,7 @@ final class ProcessInfo
         public \DateTimeImmutable $startedAt,
         public int $heartbeatTime,
         public int $memory = 0,
-        public bool $detached = false,
+        public bool $external = false,
         public bool $blocked = false,
         public bool $reloadable = true,
     ) {

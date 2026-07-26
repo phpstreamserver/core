@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Worker;
 
-use PHPStreamServer\Core\Event\ProcessDetachedEvent;
+use PHPStreamServer\Core\Event\ProcessReplacedEvent;
 
 use function PHPStreamServer\Core\getAbsoluteBinaryPath;
 
@@ -28,7 +28,7 @@ final class ExecutableWorker extends SupervisedWorker
 
     private static function start(self $worker): void
     {
-        $worker->bus->dispatch(new ProcessDetachedEvent($worker->pid))->await();
+        $worker->bus->dispatch(new ProcessReplacedEvent($worker->pid))->await();
 
         if ($worker->command === '') {
             $worker->logger->critical('External process call error: command cannot be empty', ['command' => $worker->command]);
