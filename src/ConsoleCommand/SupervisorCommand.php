@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\ConsoleCommand;
 
+use PHPStreamServer\Core\Command\GetNetworkInfoCommand;
 use PHPStreamServer\Core\Command\GetProcessesCommand;
-use PHPStreamServer\Core\Command\GetProcessNetworkInfoCommand;
 use PHPStreamServer\Core\Command\GetWorkersCommand;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
@@ -35,7 +35,7 @@ class SupervisorCommand extends Command
 
         $workers = $bus->dispatch(new GetWorkersCommand())->await();
         $processes = $bus->dispatch(new GetProcessesCommand())->await();
-        $processNetworkInfos = $bus->dispatch(new GetProcessNetworkInfoCommand())->await();
+        $processNetworkInfos = $bus->dispatch(new GetNetworkInfoCommand())->await();
 
         $processNetworkInfosByPid = [];
         foreach ($processNetworkInfos as $processNetworkInfo) {

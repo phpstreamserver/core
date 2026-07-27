@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\System;
 
-use PHPStreamServer\Core\Command\GetProcessNetworkInfoCommand;
+use PHPStreamServer\Core\Command\GetNetworkInfoCommand;
 use PHPStreamServer\Core\Command\GetServerStatusCommand;
 use PHPStreamServer\Core\ConsoleCommand\ConnectionsCommand;
 use PHPStreamServer\Core\ConsoleCommand\ReloadCommand;
@@ -51,7 +51,7 @@ final class SystemPlugin extends Plugin
             return $serverStatus;
         });
 
-        $handler->subscribe(GetProcessNetworkInfoCommand::class, static function () use ($networkTrafficTracker): array {
+        $handler->subscribe(GetNetworkInfoCommand::class, static function () use ($networkTrafficTracker): array {
             return $networkTrafficTracker->getProcessNetworkInfos();
         });
     }

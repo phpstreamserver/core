@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\ConsoleCommand;
 
-use PHPStreamServer\Core\Command\GetProcessNetworkInfoCommand;
+use PHPStreamServer\Core\Command\GetNetworkInfoCommand;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
@@ -29,7 +29,7 @@ class ConnectionsCommand extends Command
     {
         $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
 
-        $processNetworkInfos = $bus->dispatch(new GetProcessNetworkInfoCommand())->await();
+        $processNetworkInfos = $bus->dispatch(new GetNetworkInfoCommand())->await();
 
         $processNamesByPids = [];
         $connections = [];

@@ -12,6 +12,6 @@ use PHPStreamServer\Core\Plugin\System\ProcessNetworkInfo;
  *
  * @implements MessageInterface<array<ProcessNetworkInfo>>
  */
-final class GetProcessNetworkInfoCommand implements MessageInterface
+final class GetNetworkInfoCommand implements MessageInterface
 {
 }
