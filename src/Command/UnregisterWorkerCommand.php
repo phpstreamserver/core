@@ -7,7 +7,7 @@ namespace PHPStreamServer\Core\Command;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 
 /**
- * Unregister worker.
+ * Unregisters a worker using its assigned ID.
  *
  * @implements MessageInterface<null>
  */

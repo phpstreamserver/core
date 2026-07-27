@@ -12,7 +12,7 @@ use function Opis\Closure\serialize as opisSerialize;
 use function Opis\Closure\unserialize as opisUnserialize;
 
 /**
- * Registers and starts a new worker. Returns the unique worker ID.
+ * Registers a worker and returns its assigned ID.
  *
  * @implements MessageInterface<int>
  */
