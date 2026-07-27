@@ -37,6 +37,12 @@ class SupervisorCommand extends Command
         $processes = $bus->dispatch(new GetProcessesCommand())->await();
         $processNetworkInfos = $bus->dispatch(new GetProcessNetworkInfoCommand())->await();
 
+        $processNetworkInfosByPid = [];
+        foreach ($processNetworkInfos as $processNetworkInfo) {
+            $processNetworkInfosByPid[$processNetworkInfo->pid] = $processNetworkInfo;
+        }
+        unset($processNetworkInfos);
+
         echo "❯ Workers\n";
 
         if (\count($workers) > 0) {
@@ -72,9 +78,9 @@ class SupervisorCommand extends Command
                     'Bytes (RX / TX)',
                     'Status',
                 ])
-                ->addRows(\array_map(array: $processes, callback: static function (ProcessInfo $p) use ($processNetworkInfos): array {
+                ->addRows(\array_map(array: $processes, callback: static function (ProcessInfo $p) use ($processNetworkInfosByPid): array {
                     /** @var ProcessNetworkInfo|null $processNetworkInfo */
-                    $processNetworkInfo = $processNetworkInfos[$p->pid] ?? null;
+                    $processNetworkInfo = $processNetworkInfosByPid[$p->pid] ?? null;
                     $requestCount = $processNetworkInfo !== null ? $processNetworkInfo->requests : 0;
                     $connectionCount = $processNetworkInfo !== null ? \count($processNetworkInfo->connections) : 0;
                     $rx = $processNetworkInfo !== null ? $processNetworkInfo->rx : 0;

@@ -75,7 +75,7 @@ final class NetworkTrafficTracker
 
     public function getProcessNetworkInfos(): array
     {
-        return $this->processNetworkInfos;
+        return \array_values($this->processNetworkInfos);
     }
 
     /**
