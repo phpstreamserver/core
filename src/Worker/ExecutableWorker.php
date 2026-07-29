@@ -13,12 +13,12 @@ final class ExecutableWorker extends SupervisedWorker
     private readonly string $command;
 
     public function __construct(
-        string $name = '',
+        string $command,
+        string|null $name = null,
         int $count = 1,
         bool $reloadable = true,
         string|null $user = null,
         string|null $group = null,
-        string $command = '',
     ) {
         parent::__construct(name: $name, count: $count, reloadable: $reloadable, user: $user, group: $group);
 

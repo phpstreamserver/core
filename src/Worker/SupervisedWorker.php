@@ -65,7 +65,7 @@ class SupervisedWorker implements WorkerInterface
      * @param array<ReloadStrategy> $reloadStrategies
      */
     public function __construct(
-        string $name = '',
+        string|null $name = null,
         public readonly int $count = 1,
         public readonly bool $reloadable = true,
         private string|null $user = null,
@@ -79,9 +79,8 @@ class SupervisedWorker implements WorkerInterface
             throw new PHPStreamServerException('Count must be between 1 and 1024');
         }
 
-        $name = \trim($name);
-        if ($name !== '') {
-            $this->name = $name;
+        if ($name !== null && $name !== '') {
+            $this->name = \trim($name);
         }
 
         if ($onStart !== null) {
