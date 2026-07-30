@@ -27,7 +27,6 @@ use Revolt\EventLoop\Driver\StreamSelectDriver;
 use Revolt\EventLoop\Suspension;
 
 use function Amp\Future\await;
-use function PHPStreamServer\Core\generateWorkerId;
 use function PHPStreamServer\Core\getStartFile;
 use function PHPStreamServer\Core\isRunning;
 
@@ -222,8 +221,6 @@ final class MasterProcess
         $cannotBeRegistered = [];
 
         foreach ($workers as $worker) {
-            $worker->assignId(generateWorkerId());
-
             foreach ($worker::handledBy() as $handledByPluginClass) {
                 if (!isset($this->plugins[$handledByPluginClass])) {
                     $cannotBeRegistered[$worker::class] = $handledByPluginClass;

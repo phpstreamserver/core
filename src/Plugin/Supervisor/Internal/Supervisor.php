@@ -164,7 +164,7 @@ final class Supervisor
         $pid = \pcntl_fork();
         if ($pid > 0) {
             // Master process
-            $this->onProcessStart($worker->id, $pid);
+            $this->onProcessStart($worker->getId(), $pid);
             return false;
         } elseif ($pid === 0) {
             // Child process

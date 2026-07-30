@@ -12,11 +12,6 @@ interface WorkerInterface
     /**
      * @internal
      */
-    public function assignId(int $id): void;
-
-    /**
-     * @internal
-     */
     public function run(ContainerInterface $workerContainer): int;
 
     /**

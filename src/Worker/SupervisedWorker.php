@@ -26,6 +26,8 @@ use PHPStreamServer\Core\WorkerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\DriverFactory;
 
+use function PHPStreamServer\Core\generateWorkerId;
+
 class SupervisedWorker implements WorkerInterface
 {
     final public const HEARTBEAT_PERIOD = 2.5;
@@ -34,14 +36,15 @@ class SupervisedWorker implements WorkerInterface
 
     private Status $status = Status::SHUTDOWN;
     private int $exitCode = 0;
-    public readonly int $id;
-    public readonly int $pid;
-    public readonly string $name;
+    private readonly int $id;
+    private readonly int $pid;
+    private readonly string $name;
+    private DeferredFuture|null $startingFuture;
+    private readonly ReloadStrategyStack $reloadStrategyStack;
+
     public readonly ContainerInterface $container;
     public readonly LoggerInterface $logger;
     public readonly GracefulMessageBusInterface $bus;
-    private DeferredFuture|null $startingFuture;
-    private readonly ReloadStrategyStack $reloadStrategyStack;
 
     /**
      * @var array<\Closure(static): void>
@@ -98,26 +101,12 @@ class SupervisedWorker implements WorkerInterface
 
     /**
      * @internal
-     * @psalm-suppress RedundantPropertyInitializationCheck
-     */
-    final public function assignId(int $id): void
-    {
-        if (isset($this->id)) {
-            throw new PHPStreamServerException('Worker ID has already been assigned');
-        }
-
-        $this->id = $id;
-        $this->name ??= 'worker ' . $id;
-    }
-
-    /**
-     * @internal
      */
     final public function run(ContainerInterface $workerContainer): int
     {
         // Some command-line SAPIs (e.g., phpdbg) do not provide this function
         if (\function_exists('cli_set_process_title')) {
-            \cli_set_process_title(\sprintf('%s: %s', Server::NAME, $this->name));
+            \cli_set_process_title(\sprintf('%s: %s', Server::NAME, $this->getName()));
         }
 
         EventLoop::setDriver((new DriverFactory())->create());
@@ -132,7 +121,7 @@ class SupervisedWorker implements WorkerInterface
         try {
             ProcessIdentity::switchTo($this->user, $this->group);
         } catch (ProcessIdentityException $e) {
-            $this->logger->error(\sprintf('Worker "%s" failed to change process identity: %s', $this->name, $e->getMessage()));
+            $this->logger->error(\sprintf('Worker "%s" failed to change process identity: %s', $this->getName(), $e->getMessage()));
         }
 
         $reloadStrategyStack = new ReloadStrategyStack($this->reload(...), $this->reloadStrategies);
@@ -160,7 +149,7 @@ class SupervisedWorker implements WorkerInterface
         });
 
         $bus = $this->bus;
-        $pid = $this->pid;
+        $pid = $this->getPid();
         $heartbeatEvent = static fn(): ProcessHeartbeatEvent => new ProcessHeartbeatEvent($pid, \memory_get_usage(), \hrtime(true));
         EventLoop::repeat(self::HEARTBEAT_PERIOD, static function () use ($bus, $heartbeatEvent): void {
             $bus->dispatch($heartbeatEvent());
@@ -169,7 +158,7 @@ class SupervisedWorker implements WorkerInterface
         EventLoop::queue(function () use ($heartbeatEvent): void {
             $this->bus->dispatch(new CompositeMessage([
                 new ProcessSpawnedEvent(
-                    workerId: $this->id,
+                    workerId: $this->getId(),
                     pid: $this->pid,
                     user: $this->getUser(),
                     name: $this->name,
@@ -212,7 +201,7 @@ class SupervisedWorker implements WorkerInterface
 
     public function getId(): int
     {
-        return $this->id;
+        return $this->id ??= generateWorkerId();
     }
 
     public function getPid(): int
@@ -222,7 +211,7 @@ class SupervisedWorker implements WorkerInterface
 
     public function getName(): string
     {
-        return $this->name;
+        return $this->name ??= 'worker ' . $this->getId();
     }
 
     final public function getUser(): string

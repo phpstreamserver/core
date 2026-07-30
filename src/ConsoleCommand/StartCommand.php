@@ -79,7 +79,7 @@ class StartCommand extends Command
                 ->addRows(\array_map(static function (SupervisedWorker $w): array {
                     return [
                         $w->getUser(),
-                        $w->name,
+                        $w->getName(),
                         $w->count,
                     ];
                 }, $workers))

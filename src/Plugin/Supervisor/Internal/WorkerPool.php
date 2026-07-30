@@ -95,18 +95,17 @@ final class WorkerPool
 
     public function addWorker(SupervisedWorker $worker): WorkerInfo
     {
-        $this->workersById[$worker->id] = $worker;
-
+        $id = $worker->getId();
+        $this->workersById[$id] = $worker;
         $workerInfo = new WorkerInfo(
-            id: $worker->id,
+            id: $id,
             name: $worker->getName(),
             user: $worker->getUser(),
             status: WorkerInfo::STATUS_STARTING,
             processCount: $worker->count,
             reloadable: $worker->reloadable,
         );
-
-        $this->workerInfosById[$worker->id] = $workerInfo;
+        $this->workerInfosById[$id] = $workerInfo;
 
         return $workerInfo;
     }

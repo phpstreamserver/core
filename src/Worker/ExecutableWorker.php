@@ -28,7 +28,7 @@ final class ExecutableWorker extends SupervisedWorker
 
     private static function start(self $worker): void
     {
-        $worker->bus->dispatch(new ProcessReplacedEvent($worker->pid))->await();
+        $worker->bus->dispatch(new ProcessReplacedEvent($worker->getPid()))->await();
 
         if ($worker->command === '') {
             $worker->logger->critical('External process call error: command cannot be empty', ['command' => $worker->command]);
