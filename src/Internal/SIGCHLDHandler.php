@@ -40,7 +40,14 @@ final class SIGCHLDHandler
                     } catch (\Throwable $e) {
                         EventLoop::queue(static function () use ($pid, $e): void {
                             \trigger_error(
-                                \sprintf('SIGCHLD callback failed for child PID %d: %s: %s in %s:%d', $pid, $e::class, $e->getMessage(), $e->getFile(), $e->getLine()),
+                                \sprintf(
+                                    'SIGCHLD callback failed for child PID %d: %s: %s in %s:%d',
+                                    $pid,
+                                    $e::class,
+                                    $e->getMessage(),
+                                    $e->getFile(),
+                                    $e->getLine(),
+                                ),
                                 \E_USER_WARNING,
                             );
                         });
