@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal\MessageBus;
 
+use Amp\CancelledException;
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Socket\ConnectException;
@@ -11,6 +12,7 @@ use Amp\Socket\DnsSocketConnector;
 use Amp\Socket\SocketConnector;
 use Amp\Socket\StaticSocketConnector;
 use Amp\Socket\UnixAddress;
+use Amp\TimeoutCancellation;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 use Revolt\EventLoop;
 
@@ -20,11 +22,18 @@ use function PHPStreamServer\Core\readExactly;
 
 final class SocketFileMessageBus implements GracefulMessageBusInterface
 {
-    private SocketConnector $connector;
-    private int $queue = 0;
+    private const RETRY_DELAY = 0.01;
 
-    public function __construct(string $socketFile)
+    private readonly SocketConnector $connector;
+    private int $queue = 0;
+    private bool $stopping = false;
+
+    public function __construct(string $socketFile, private readonly float $connectTimeout = 1.0)
     {
+        if ($connectTimeout <= 0) {
+            throw new \InvalidArgumentException('Connection timeout must be greater than zero');
+        }
+
         $this->connector = new StaticSocketConnector(new UnixAddress($socketFile), new DnsSocketConnector());
     }
 
@@ -36,19 +45,32 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
      */
     public function dispatch(MessageInterface $message): Future
     {
+        if ($this->stopping) {
+            return Future::error(new ConnectException('The master message bus is stopping'));
+        }
+
         $this->queue++;
         $connector = $this->connector;
+        $connectTimeout = $this->connectTimeout;
         $queue = &$this->queue;
 
-        return async(static function () use ($message, $connector): mixed {
-            while (true) {
-                try {
-                    $socket = $connector->connect('');
-                    break;
-                } catch (ConnectException) {
-                    delay(0.01);
+        return async(static function () use ($message, $connector, $connectTimeout): mixed {
+            $cancellation = new TimeoutCancellation($connectTimeout);
+
+            try {
+                while (true) {
+                    try {
+                        $socket = $connector->connect(uri: '', cancellation: $cancellation);
+                        break;
+                    } catch (ConnectException) {
+                        delay(timeout: self::RETRY_DELAY, cancellation: $cancellation);
+                    }
                 }
+            } catch (CancelledException $e) {
+                throw new ConnectException(message: \sprintf('Timed out connecting to the master message bus after %.2f seconds', $connectTimeout), previous: $e);
             }
+
+            unset($cancellation);
 
             $serializedMessage = \serialize($message);
             $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > SocketFileMessageHandler::COMPRESS_FROM;
@@ -76,6 +98,7 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
 
     public function stop(): Future
     {
+        $this->stopping = true;
         $queue = &$this->queue;
         $deferred = new DeferredFuture();
         EventLoop::defer($deferred->complete(...));
