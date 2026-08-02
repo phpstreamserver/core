@@ -117,6 +117,11 @@ final class WorkerPool
         }
 
         $worker->status = WorkerInfo::STATUS_STOPPING;
+
+        if ($this->getWorkerPids($workerId) === []) {
+            unset($this->workersById[$workerId]);
+            unset($this->workerInfosById[$workerId]);
+        }
     }
 
     public function addProcess(int $workerId, int $pid): void

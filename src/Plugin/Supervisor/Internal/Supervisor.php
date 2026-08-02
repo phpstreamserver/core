@@ -8,6 +8,7 @@ use Amp\DeferredFuture;
 use Amp\Future;
 use PHPStreamServer\Core\Command\GetProcessesCommand;
 use PHPStreamServer\Core\Command\GetWorkersCommand;
+use PHPStreamServer\Core\Command\StopServerCommand;
 use PHPStreamServer\Core\Event\ProcessBlockedEvent;
 use PHPStreamServer\Core\Event\ProcessExitEvent;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
@@ -22,6 +23,7 @@ use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
 
 use function Amp\async;
+use function Amp\delay;
 use function Amp\Future\await;
 use function PHPStreamServer\Core\strSignal;
 
@@ -30,12 +32,19 @@ use function PHPStreamServer\Core\strSignal;
  */
 final class Supervisor
 {
+    private const SPAWN_BATCH_SIZE = 32;
+    private const SPAWN_BATCH_DELAY = 0.004;
+
     private LoggerInterface $logger;
     public MessageBusInterface $messageBus;
     public MessageHandlerInterface $messageHandler;
     public readonly WorkerPool $pool;
     private Suspension $suspension;
     private readonly float $restartDelay;
+    private bool $stopping = false;
+    private bool $workerStartScheduled = false;
+    /** @var array<int, string> */
+    private array $restartCallbackIds = [];
 
     public function __construct(
         private Status &$serverStatus,
@@ -71,8 +80,12 @@ final class Supervisor
 
     public function registerWorker(SupervisedWorker $worker): void
     {
-        $workerInfo = $this->pool->addWorker($worker);
-        $this->startWorker($workerInfo);
+        if ($this->pool->getWorkerById($worker->getId()) === null) {
+            $this->pool->addWorker($worker);
+            $this->startWorkers();
+        } else {
+            throw new PHPStreamServerException(\sprintf('Worker %d is already registered', $worker->getId()));
+        }
     }
 
     public function unregisterWorker(int $workerId): void
@@ -81,12 +94,21 @@ final class Supervisor
             return;
         }
 
-        $this->pool->removeWorker($workerInfo->id);
+        $workerId = $workerInfo->id;
+
+        if (isset($this->restartCallbackIds[$workerId])) {
+            EventLoop::cancel($this->restartCallbackIds[$workerId]);
+            unset($this->restartCallbackIds[$workerId]);
+        }
+
         $this->stopWorker($workerInfo);
+        $this->pool->removeWorker($workerId);
     }
 
     public function stop(): Future
     {
+        $this->stopping = true;
+
         return async(function (): void {
             $futures = [];
             foreach ($this->pool->getWorkerInfos() as $workerInfo) {
@@ -98,6 +120,10 @@ final class Supervisor
 
     public function reload(): void
     {
+        if ($this->stopping) {
+            return;
+        }
+
         foreach ($this->pool->getProcessInfos() as $processInfo) {
             if ($processInfo->reloadable) {
                 \posix_kill($processInfo->pid, $processInfo->external ? SIGTERM : SIGUSR1);
@@ -105,24 +131,60 @@ final class Supervisor
         }
     }
 
-    private function startWorker(WorkerInfo $workerInfo): Future
+    private function startWorkers(): void
     {
-        return async(function () use ($workerInfo): void {
-            $worker = $this->pool->getWorkerById($workerInfo->id);
-            \assert($worker !== null);
-            while (\count($this->pool->getWorkerPids($workerInfo->id)) < $workerInfo->processCount) {
-                if ($this->spawnProcess($worker)) {
-                    return;
+        if ($this->workerStartScheduled || $this->stopping) {
+            return;
+        }
+
+        $this->workerStartScheduled = true;
+
+        EventLoop::defer(function (): void {
+            if ($this->stopping) {
+                $this->workerStartScheduled = false;
+                return;
+            }
+
+            $spawned = 0;
+
+            foreach ($this->pool->getWorkerInfos() as $workerInfo) {
+                if ($workerInfo->status === WorkerInfo::STATUS_STOPPING || isset($this->restartCallbackIds[$workerInfo->id])) {
+                    continue;
+                }
+
+                $worker = $this->pool->getWorkerById($workerInfo->id);
+                \assert($worker !== null);
+
+                $processesToSpawn = $workerInfo->processCount - \count($this->pool->getWorkerPids($workerInfo->id));
+
+                for ($i = 0; $i < $processesToSpawn; $i++) {
+                    if ($spawned++ === self::SPAWN_BATCH_SIZE) {
+                        delay(self::SPAWN_BATCH_DELAY);
+                        $this->workerStartScheduled = false;
+                        $this->startWorkers();
+                        return;
+                    }
+
+                    if ($this->spawnProcess($worker) === 0) {
+                        return;
+                    }
                 }
             }
+
+            $this->workerStartScheduled = false;
         });
     }
 
     private function stopWorker(WorkerInfo $workerInfo): Future
     {
+        $pidsToKill = $this->pool->getWorkerPids($workerInfo->id);
+
+        if ($pidsToKill === []) {
+            return Future::complete();
+        }
+
         $future = new DeferredFuture();
         $stopTimeout = $this->stopTimeout;
-        $pidsToKill = $this->pool->getWorkerPids($workerInfo->id);
 
         $onProcessExit = static function (ProcessExitEvent $event) use (&$pidsToKill, $future): void {
             $pidsToKill = \array_values(\array_diff($pidsToKill, [$event->pid]));
@@ -159,19 +221,31 @@ final class Supervisor
         return $future->getFuture();
     }
 
-    private function spawnProcess(SupervisedWorker $worker): bool
+    private function spawnProcess(SupervisedWorker $worker): int
     {
-        $pid = \pcntl_fork();
+        $forkError = '';
+        \set_error_handler(error_levels: \E_WARNING, callback: static function (int $code, string $message) use (&$forkError): true {
+            $forkError = \trim(\str_replace('pcntl_fork():', '', $message));
+            return true;
+        });
+
+        try {
+            $pid = \pcntl_fork();
+        } finally {
+            \restore_error_handler();
+        }
+
         if ($pid > 0) {
             // Master process
             $this->onProcessStart($worker->getId(), $pid);
-            return false;
+            return $pid;
         } elseif ($pid === 0) {
             // Child process
             $this->suspension->resume($worker);
-            return true;
+            return 0;
         } else {
-            throw new PHPStreamServerException('Fork failed');
+            $this->messageBus->dispatch(new StopServerCommand(1));
+            throw new PHPStreamServerException(\sprintf('Fork failed: %s', $forkError));
         }
     }
 
@@ -225,14 +299,17 @@ final class Supervisor
                 $this->logger->warning(\sprintf('Worker "%s" [PID:%d] exited with code %d', $workerInfo->name, $pid, $exitCode));
             }
 
-            if ($workerInfo->status === WorkerInfo::STATUS_RUNNING) {
-                // Restart worker
-                EventLoop::delay($this->restartDelay, function () use ($workerInfo): void {
-                    $workerInfo = $this->pool->getWorkerInfoById($workerInfo->id);
-                    if ($this->serverStatus === Status::RUNNING && $workerInfo !== null && $workerInfo->status === WorkerInfo::STATUS_RUNNING) {
-                        $worker = $this->pool->getWorkerById($workerInfo->id);
-                        \assert($worker !== null);
-                        $this->spawnProcess($worker);
+            if ($workerInfo->status !== WorkerInfo::STATUS_STOPPING) {
+                $workerId = $workerInfo->id;
+                if (isset($this->restartCallbackIds[$workerId])) {
+                    EventLoop::cancel($this->restartCallbackIds[$workerId]);
+                }
+
+                // Restart
+                $this->restartCallbackIds[$workerId] = EventLoop::delay($this->restartDelay, function () use ($workerId): void {
+                    unset($this->restartCallbackIds[$workerId]);
+                    if ($this->serverStatus === Status::RUNNING) {
+                        $this->startWorkers();
                     }
                 });
             }
