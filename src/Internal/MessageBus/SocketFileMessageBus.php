@@ -4,37 +4,34 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal\MessageBus;
 
+use Amp\ByteStream\StreamException;
 use Amp\CancelledException;
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Socket\ConnectException;
 use Amp\Socket\DnsSocketConnector;
+use Amp\Socket\Socket;
 use Amp\Socket\SocketConnector;
 use Amp\Socket\StaticSocketConnector;
 use Amp\Socket\UnixAddress;
 use Amp\TimeoutCancellation;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
-use Revolt\EventLoop;
 
 use function Amp\async;
-use function Amp\delay;
-use function PHPStreamServer\Core\readExactly;
 
 final class SocketFileMessageBus implements GracefulMessageBusInterface
 {
-    private const RETRY_DELAY = 0.01;
+    use MessageBusTrait;
 
     private readonly SocketConnector $connector;
-    private int $queue = 0;
+    private Socket|null $socket = null;
+    private Future $dispatchTail;
     private bool $stopping = false;
 
-    public function __construct(string $socketFile, private readonly float $connectTimeout = 1.0)
+    public function __construct(string $socketFile)
     {
-        if ($connectTimeout <= 0) {
-            throw new \InvalidArgumentException('Connection timeout must be greater than zero');
-        }
-
         $this->connector = new StaticSocketConnector(new UnixAddress($socketFile), new DnsSocketConnector());
+        $this->dispatchTail = Future::complete();
     }
 
     /**
@@ -49,65 +46,81 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
             return Future::error(new ConnectException('The master message bus is stopping'));
         }
 
-        $this->queue++;
-        $connector = $this->connector;
-        $connectTimeout = $this->connectTimeout;
-        $queue = &$this->queue;
+        $previousDispatch = $this->dispatchTail;
+        $nextDispatch = new DeferredFuture();
+        $this->dispatchTail = $nextDispatch->getFuture();
 
-        return async(static function () use ($message, $connector, $connectTimeout): mixed {
-            $cancellation = new TimeoutCancellation($connectTimeout);
-
+        return async(function () use ($message, $previousDispatch, $nextDispatch): mixed {
             try {
-                while (true) {
-                    try {
-                        $socket = $connector->connect(uri: '', cancellation: $cancellation);
-                        break;
-                    } catch (ConnectException) {
-                        delay(timeout: self::RETRY_DELAY, cancellation: $cancellation);
-                    }
+                $previousDispatch->await();
+                $socket = $this->getSocket();
+
+                $serializedMessage = \serialize($message);
+                $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > self::COMPRESS_FROM;
+
+                if ($compressMessage) {
+                    $serializedMessage = \gzdeflate($serializedMessage, 1);
                 }
-            } catch (CancelledException $e) {
-                throw new ConnectException(message: \sprintf('Timed out connecting to the master message bus after %.2f seconds', $connectTimeout), previous: $e);
+
+                $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
+                $socket->write($payload);
+
+                $header = self::readExactly($socket, 6, new TimeoutCancellation(self::PAYLOAD_READ_TIMEOUT, 'Message header timed out'));
+                ['size' => $size, 'gzip' => $compressed] = \unpack('Vsize/vgzip', $header);
+                $data = self::readExactly($socket, $size, new TimeoutCancellation(self::PAYLOAD_READ_TIMEOUT, 'Message frame timed out'));
+
+                if ($compressed) {
+                    $data = \gzinflate($data);
+                }
+
+                return \unserialize($data);
+            } catch (CancelledException|StreamException $e) {
+                $this->socket?->close();
+                $this->socket = null;
+                throw $e;
+            } finally {
+                $nextDispatch->complete();
             }
-
-            unset($cancellation);
-
-            $serializedMessage = \serialize($message);
-            $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > SocketFileMessageHandler::COMPRESS_FROM;
-
-            if ($compressMessage) {
-                $serializedMessage = \gzdeflate($serializedMessage, 1);
-            }
-
-            $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
-
-            $socket->write($payload);
-            $header = readExactly($socket, 6);
-            ['size' => $size, 'gzip' => $compressed] = \unpack('Vsize/vgzip', $header);
-            $data = readExactly($socket, $size);
-
-            if ($compressed) {
-                $data = \gzinflate($data);
-            }
-
-            return \unserialize($data);
-        })->finally(static function () use (&$queue): void {
-            $queue--;
         });
+    }
+
+    /**
+     * @throws ConnectException
+     */
+    private function getSocket(): Socket
+    {
+        if ($this->socket !== null && $this->socket->isReadable() && $this->socket->isWritable()) {
+            return $this->socket;
+        }
+
+        $this->socket?->close();
+        $this->socket = null;
+
+        try {
+            $socket = $this->connector->connect(uri: '', cancellation: new TimeoutCancellation(self::CONNECT_TIMEOUT, 'The master message bus connection timed out'));
+            $socket->write(self::HANDSHAKE);
+            $handshake = self::readExactly($socket, \strlen(self::HANDSHAKE), new TimeoutCancellation(self::PROTOCOL_READ_TIMEOUT, 'Message header timed out'));
+
+            if ($handshake !== self::HANDSHAKE) {
+                throw new ConnectException('The master message bus returned an invalid protocol handshake');
+            }
+
+            return $this->socket = $socket;
+        } catch (CancelledException $e) {
+            throw new ConnectException(message: $e->getMessage(), previous: $e);
+        }
     }
 
     public function stop(): Future
     {
         $this->stopping = true;
-        $queue = &$this->queue;
-        $deferred = new DeferredFuture();
-        EventLoop::defer($deferred->complete(...));
+        $dispatchTail = $this->dispatchTail;
+        $socket = &$this->socket;
 
-        return async(static function () use (&$queue, $deferred): void {
-            $deferred->getFuture()->await();
-            while ($queue > 0) {
-                delay(0.001);
-            }
+        return async(static function () use ($dispatchTail, &$socket): void {
+            $dispatchTail->await();
+            $socket?->close();
+            $socket = null;
         });
     }
 }

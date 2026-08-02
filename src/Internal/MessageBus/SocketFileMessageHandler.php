@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Internal\MessageBus;
 
 use Amp\ByteStream\StreamException;
+use Amp\CancelledException;
 use Amp\Future;
+use Amp\Socket\BindContext;
 use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ResourceServerSocketFactory;
 use Amp\Socket\UnixAddress;
+use Amp\TimeoutCancellation;
 use PHPStreamServer\Core\MessageBus\CompositeMessage;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
@@ -17,12 +20,10 @@ use Revolt\EventLoop;
 
 use function Amp\async;
 use function Amp\weakClosure;
-use function PHPStreamServer\Core\readExactly;
 
 final class SocketFileMessageHandler implements MessageHandlerInterface, MessageBusInterface
 {
-    public const CHUNK_SIZE = 65536;
-    public const COMPRESS_FROM = 8192;
+    use MessageBusTrait;
 
     private ResourceServerSocket $socket;
 
@@ -33,49 +34,75 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
 
     public function __construct(string $socketFile)
     {
-        $this->socket = (new ResourceServerSocketFactory(chunkSize: self::CHUNK_SIZE))->listen(new UnixAddress($socketFile));
-        $server = &$this->socket;
-        $subscribers = &$this->subscribers;
+        $this->socket = (new ResourceServerSocketFactory(chunkSize: self::CHUNK_SIZE))->listen(
+            address: new UnixAddress($socketFile),
+            bindContext: (new BindContext())->withBacklog(self::BACKLOG),
+        );
 
         \chmod($socketFile, 0666);
 
+        $server = &$this->socket;
+        $subscribers = &$this->subscribers;
+
         EventLoop::queue(static function () use (&$server, &$subscribers) {
             while ($socket = $server->accept()) {
-                try {
-                    $header = readExactly($socket, 6);
-                    ['size' => $size, 'gzip' => $compressed] = \unpack('Vsize/vgzip', $header);
-                    $data = readExactly($socket, $size);
+                $ownerPid = \posix_getpid();
+                async(static function () use ($socket, &$subscribers, $ownerPid): void {
+                    try {
+                        $handshake = self::readExactly($socket, \strlen(self::HANDSHAKE), new TimeoutCancellation(self::PROTOCOL_READ_TIMEOUT, 'Message bus handshake timed out'));
+                        if ($handshake !== self::HANDSHAKE) {
+                            return;
+                        }
 
-                    if ($compressed) {
-                        $data = \gzinflate($data);
-                    }
+                        $socket->write(self::HANDSHAKE);
 
-                    $message = \unserialize($data);
-                    \assert($message instanceof MessageInterface);
-                    $return = null;
+                        while (true) {
+                            $firstByte = $socket->read(limit: 1);
+                            if ($firstByte === null) {
+                                break;
+                            }
 
-                    foreach ($subscribers[$message::class] ?? [] as $subscriber) {
-                        if (null !== $subscriberReturn = $subscriber($message)) {
-                            $return = $subscriberReturn;
-                            break;
+                            $header = $firstByte . self::readExactly($socket, 5, new TimeoutCancellation(self::PROTOCOL_READ_TIMEOUT, 'Message header timed out'));
+                            ['size' => $size, 'gzip' => $compressed] = \unpack('Vsize/vgzip', $header);
+                            $data = self::readExactly($socket, $size, new TimeoutCancellation(self::PAYLOAD_READ_TIMEOUT, 'Message frame timed out'));
+
+                            if ($compressed) {
+                                $data = \gzinflate($data);
+                            }
+
+                            $message = \unserialize($data);
+                            if (!$message instanceof MessageInterface) {
+                                break;
+                            }
+
+                            $return = null;
+
+                            foreach ($subscribers[$message::class] ?? [] as $subscriber) {
+                                if (null !== $subscriberReturn = $subscriber($message)) {
+                                    $return = $subscriberReturn;
+                                    break;
+                                }
+                            }
+
+                            $serializedMessage = \serialize($return);
+                            $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > self::COMPRESS_FROM;
+
+                            if ($compressMessage) {
+                                $serializedMessage = \gzdeflate($serializedMessage, 1);
+                            }
+
+                            $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
+
+                            $socket->write($payload);
+                        }
+                    } catch (CancelledException|StreamException) {
+                        // The socket was closed
+                    } finally {
+                        if (\posix_getpid() === $ownerPid) {
+                            $socket->end();
                         }
                     }
-
-                    $serializedMessage = \serialize($return);
-                    $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > self::COMPRESS_FROM;
-
-                    if ($compressMessage) {
-                        $serializedMessage = \gzdeflate($serializedMessage, 1);
-                    }
-
-                    $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
-
-                    $socket->write($payload);
-                } catch (StreamException) {
-                    // The socket is no longer writable
-                } finally {
-                    $socket->end();
-                }
+                });
             }
         });
 
@@ -86,8 +113,9 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
         }));
     }
 
-    public function __destruct()
+    public function stop(): void
     {
+        $this->subscribers = [];
         $this->socket->close();
     }
 

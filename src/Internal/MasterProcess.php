@@ -327,6 +327,10 @@ final class MasterProcess
     // After forking a worker, free inherited master-process resources in the child process
     private function free(): void
     {
+        if ($this->messageHandler instanceof SocketFileMessageHandler) {
+            $this->messageHandler->stop();
+        }
+
         $identifiers = EventLoop::getDriver()->getIdentifiers();
         \array_walk($identifiers, EventLoop::getDriver()->cancel(...));
         EventLoop::getDriver()->stop();

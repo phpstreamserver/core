@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core;
 
-use Amp\Socket\Socket;
-use Amp\Socket\SocketException;
 use Revolt\EventLoop\DriverFactory;
 
 function getStartFile(): string
@@ -133,21 +131,6 @@ function generateWorkerId(): int
 {
     static $nextWorkerId = 1;
     return $nextWorkerId++;
-}
-
-function readExactly(Socket $socket, int $length): string
-{
-    $data = '';
-    while (\strlen($data) < $length) {
-        /** @psalm-suppress InvalidArgument */
-        $chunk = $socket->read(limit: $length - \strlen($data));
-        if ($chunk === null) {
-            throw new SocketException(\sprintf('Socket closed after receiving %d of %d expected bytes', \strlen($data), $length));
-        }
-        $data .= $chunk;
-    }
-
-    return $data;
 }
 
 function strSignal(int $signal): string
