@@ -71,7 +71,7 @@ final readonly class App
             try {
                 return $command->execute($this->pidFile, $this->socketFile);
             } catch (ServerIsNotRunning) {
-                echo \sprintf("<color;bg=red>%s is not running</>\n", Server::NAME);
+                echo \sprintf("● %s is <color;fg=red>stopped</>\n", Server::NAME);
                 return 1;
             } catch (ServerIsRunning) {
                 echo \sprintf("<color;bg=red>%s is already running</>\n", Server::NAME);
