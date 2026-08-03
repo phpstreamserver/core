@@ -18,16 +18,16 @@ class StopCommand extends Command
 
     final public static function getDescription(): string
     {
-        return 'Stop server';
+        return 'Stop the server';
     }
 
     public function execute(string $pidFile, string $socketFile): int
     {
         $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
         $future = $bus->dispatch(new StopServerCommand());
-        echo Server::NAME . " stopping ...\n";
+        echo \sprintf("<color;fg=brand;options=bold>❯</> Stopping %s...\n", Server::NAME);
         $future->await();
-        echo Server::NAME . " has stopped\n";
+        echo \sprintf("<color;fg=green;options=bold>✓</> %s stopped\n", Server::NAME);
 
         return 0;
     }

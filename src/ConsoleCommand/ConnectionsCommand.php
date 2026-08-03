@@ -22,7 +22,7 @@ class ConnectionsCommand extends Command
 
     final public static function getDescription(): string
     {
-        return 'Show active connections';
+        return 'List active connections';
     }
 
     public function execute(string $pidFile, string $socketFile): int
@@ -41,7 +41,7 @@ class ConnectionsCommand extends Command
             }
         }
 
-        echo "❯ Connections\n";
+        echo "<color;fg=brand;options=bold>❯ Connections</>\n";
 
         if (\count($connections) > 0) {
             echo (new Table(indent: 1))
@@ -60,11 +60,11 @@ class ConnectionsCommand extends Command
                         self::formatAddress($connection->localIp, $connection->localPort),
                         self::formatAddress($connection->remoteIp, $connection->remotePort),
                         formatDuration($connection->connectedAt),
-                        \sprintf('(%s / %s)', formatFileSize($connection->rx), formatFileSize($connection->tx)),
+                        \sprintf('%s / %s', formatFileSize($connection->rx), formatFileSize($connection->tx)),
                     ];
                 }));
         } else {
-            echo "  <color;bg=yellow> ! </> <color;fg=yellow>There are no active connections</>\n";
+            echo "  No active connections\n";
         }
 
         return 0;

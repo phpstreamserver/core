@@ -24,7 +24,7 @@ class StartCommand extends Command
 
     final public static function getDescription(): string
     {
-        return 'Start server';
+        return 'Start the server';
     }
 
     public function configure(): void
@@ -56,18 +56,18 @@ class StartCommand extends Command
 
         $eventLoop = getDriverName();
 
-        echo "❯ " . Server::TITLE . "\n";
+        echo \sprintf("<color;fg=brand;options=bold>❯ 🌸 %s</>\n", Server::NAME);
 
         echo (new Table(indent: 1))
             ->addRows([
-                [Server::NAME . ' version:', Server::getVersion()],
-                ['PHP version:', PHP_VERSION],
-                ['Event loop driver:', $eventLoop],
-                ['Worker count:', \count($workers)],
+                ['Version:', Server::getVersion()],
+                ['PHP:', PHP_VERSION],
+                ['Event loop:', $eventLoop],
+                ['Workers:', \count($workers)],
             ])
         ;
 
-        echo "❯ Workers\n";
+        echo "<color;fg=brand;options=bold>❯ Workers</>\n";
 
         if (\count($workers) > 0) {
             echo (new Table(indent: 1))
@@ -78,14 +78,14 @@ class StartCommand extends Command
                 ])
                 ->addRows(\array_map(static function (SupervisedWorker $w): array {
                     return [
-                        $w->getUser(),
+                        $w->getUser() === 'root' ? $w->getUser() : "<color;fg=gray>{$w->getUser()}</>",
                         $w->getName(),
                         $w->count,
                     ];
                 }, $workers))
             ;
         } else {
-            echo "  <color;bg=yellow> ! </> <color;fg=yellow>There are no workers</>\n";
+            echo "  No workers configured\n";
         }
 
         if (!$daemonize) {

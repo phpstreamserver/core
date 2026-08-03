@@ -71,20 +71,20 @@ final readonly class App
             try {
                 return $command->execute($this->pidFile, $this->socketFile);
             } catch (ServerIsNotRunning) {
-                echo \sprintf("● %s is <color;fg=red>stopped</>\n", Server::NAME);
+                echo \sprintf("<color;fg=red;options=bold>✗</> %s is not running\n", Server::NAME);
                 return 1;
             } catch (ServerIsRunning) {
-                echo \sprintf("<color;bg=red>%s is already running</>\n", Server::NAME);
+                echo \sprintf("<color;fg=red;options=bold>✗</> %s is already running\n", Server::NAME);
                 return 1;
             }
         }
 
         if ($currentCommand !== null) {
-            echo \sprintf("<color;bg=red>✘ Command \"%s\" does not exist</>\n", $currentCommand);
+            echo \sprintf("<color;fg=red;options=bold>✗</> Unknown command \"%s\"\n", $currentCommand);
             return 1;
         }
 
-        $this->showGlobalHelp($allRegisteredCommands, $options->getOptionDefinitions());
+        $this->showApplicationHelp($allRegisteredCommands, $options->getOptionDefinitions());
         return 0;
     }
 
@@ -99,10 +99,10 @@ final readonly class App
         return new Options(
             argv: $_SERVER['argv'] ?? [],
             defaultOptionDefinitions: [
-                new OptionDefinition('help', 'h', 'Show help'),
-                new OptionDefinition('quiet', 'q', 'Suppress output'),
-                new OptionDefinition('no-color', null, 'Disable colors'),
-                new OptionDefinition('version', null, 'Show version'),
+                new OptionDefinition('help', 'h', 'Show command help'),
+                new OptionDefinition('quiet', 'q', 'Suppress all output'),
+                new OptionDefinition('no-color', null, 'Disable ANSI colors'),
+                new OptionDefinition('version', null, 'Print the version'),
             ],
         );
     }
@@ -127,14 +127,15 @@ final readonly class App
      * @param iterable<Command> $commands
      * @param array<OptionDefinition> $options
      */
-    private static function showGlobalHelp(iterable $commands, array $options): void
+    private static function showApplicationHelp(iterable $commands, array $options): void
     {
-        echo \sprintf("%s (%s)\n", Server::TITLE, Server::getVersion());
-        echo "<color;fg=yellow>Usage:</>\n";
-        echo \sprintf("  %s <command> [options]\n", \basename(getStartFile()));
-        echo "<color;fg=yellow>Commands:</>\n";
+        echo \sprintf("<color;fg=brand;options=bold>🌸 %s</>  <color;options=dim>%s</>\n", Server::NAME, Server::getVersion());
+        echo "  PHP application server and process manager\n";
+        echo "<color;fg=brand;options=bold>Usage</>\n";
+        echo \sprintf("  <color;fg=token>%s</> <command> [options]\n", self::getInvocation());
+        echo "<color;fg=brand;options=bold>Commands</>\n";
         echo (new Table(indent: 1))->addRows(self::createCommandsTableRows($commands));
-        echo "<color;fg=yellow>Options:</>\n";
+        echo "<color;fg=brand;options=bold>Global options</>\n";
         echo (new Table(indent: 1))->addRows(self::createOptionsTableRows($options));
     }
 
@@ -143,13 +144,24 @@ final readonly class App
      */
     private static function showCommandHelp(Command $command, iterable $options): void
     {
-        echo \sprintf("%s (%s)\n", Server::TITLE, Server::getVersion());
-        echo "<color;fg=yellow>Description:</>\n";
+        echo \sprintf("<color;fg=brand;options=bold>🌸 %s</>  <color;options=dim>%s</>\n", Server::NAME, Server::getVersion());
+        echo "  PHP application server and process manager\n";
+        echo "<color;fg=brand;options=bold>Description</>\n";
         echo \sprintf("  %s\n", $command::getDescription());
-        echo "<color;fg=yellow>Usage:</>\n";
-        echo \sprintf("  %s %s [options]\n", \basename(getStartFile()), $command::getName());
-        echo "<color;fg=yellow>Options:</>\n";
+        echo "<color;fg=brand;options=bold>Usage</>\n";
+        echo \sprintf("  <color;fg=token>%s %s</> [options]\n", self::getInvocation(), $command::getName());
+        echo "<color;fg=brand;options=bold>Options</>\n";
         echo (new Table(indent: 1))->addRows(self::createOptionsTableRows($options));
+    }
+
+    private static function getInvocation(): string
+    {
+        $startFile = $_SERVER['argv'][0] ?? getStartFile();
+        if (\preg_match('~^[a-zA-Z0-9_./-]+$~D', $startFile) !== 1) {
+            $startFile = \escapeshellarg($startFile);
+        }
+
+        return 'php ' . $startFile;
     }
 
     /**
@@ -159,7 +171,7 @@ final readonly class App
     {
         foreach ($commands as $command) {
             yield [
-                \sprintf('<color;fg=green>%s</>', $command::getName()),
+                \sprintf('<color;fg=token>%s</>', $command::getName()),
                 $command::getDescription(),
             ];
         }
@@ -172,7 +184,7 @@ final readonly class App
     {
         foreach ($options as $option) {
             yield [
-                \sprintf('<color;fg=green>%s--%s</>', $option->shortName !== null ? '-' . $option->shortName . ', ' : '    ', $option->name),
+                \sprintf('<color;fg=token>%s--%s</>', $option->shortName !== null ? '-' . $option->shortName . ', ' : '    ', $option->name),
                 $option->description,
             ];
         }

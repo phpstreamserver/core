@@ -18,16 +18,16 @@ class ReloadCommand extends Command
 
     final public static function getDescription(): string
     {
-        return 'Reload server';
+        return 'Reload the server';
     }
 
     public function execute(string $pidFile, string $socketFile): int
     {
         $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
         $future = $bus->dispatch(new ReloadServerCommand());
-        echo Server::NAME . " reloading ...\n";
+        echo \sprintf("<color;fg=brand;options=bold>❯</> Reloading %s...\n", Server::NAME);
         $future->await();
-        echo Server::NAME . " reloaded\n";
+        echo \sprintf("<color;fg=green;options=bold>✓</> %s reloaded\n", Server::NAME);
 
         return 0;
     }

@@ -12,7 +12,7 @@ final class Colorizer
     /**
      * @see https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
      */
-    private const COLORMAP = [
+    private const COLOR_MAP = [
         'black' => 0,
         'red' => 1,
         'green' => 2,
@@ -22,6 +22,13 @@ final class Colorizer
         'cyan' => 6,
         'white' => 7,
         'gray' => 8,
+        'brand' => 168,
+        'token' => 73,
+    ];
+
+    private const OPTION_MAP = [
+        'bold' => 1,
+        'dim' => 2,
     ];
 
     private function __construct()
@@ -56,20 +63,33 @@ final class Colorizer
     }
 
     /**
-     * Colorize a string in the terminal. Usage: <color;fg=green;bg=black>green text</>
+     * Format a string in the terminal. Usage: <color;fg=green;options=bold>bold green text</>
      */
     public static function colorize(string $string): string
     {
         \preg_match_all('/<color;(.+)>.+<\/(?:color)?>/U', $string, $matches, \PREG_SET_ORDER);
         foreach ($matches as $match) {
+            /** @var array<string, string> $attr */
             \parse_str(\str_replace(';', '&', $match[1] ?? ''), $attr);
             /** @var int $pos */
             $pos = \strpos($string, $match[0]);
             $len = \strlen($match[0]);
             $text = \strip_tags($match[0]);
-            $color = self::COLORMAP[$attr['fg'] ?? $attr['bg']] ?? $attr['fg'] ?? $attr['bg'];
-            $isFg = isset($attr['fg']);
-            $formattedString = \sprintf("\e[%s;5;%sm%s\e[0m", $isFg ? '38' : '48', $color, $text);
+            $codes = [];
+            foreach (\explode(',', $attr['options'] ?? '') as $option) {
+                if (isset(self::OPTION_MAP[$option])) {
+                    $codes[] = (string) self::OPTION_MAP[$option];
+                }
+            }
+            foreach (['fg' => 38, 'bg' => 48] as $key => $code) {
+                if (!isset($attr[$key])) {
+                    continue;
+                }
+
+                $color = self::COLOR_MAP[$attr[$key]] ?? $attr[$key];
+                $codes[] = \sprintf('%d;5;%s', $code, $color);
+            }
+            $formattedString = $codes === [] ? $text : \sprintf("\e[%sm%s\e[0m", \implode(';', $codes), $text);
             $string = \substr_replace($string, $formattedString, $pos, $len);
         }
 

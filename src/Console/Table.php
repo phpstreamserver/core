@@ -54,7 +54,7 @@ final class Table implements \Stringable
         foreach ($this->data as $y => $row) {
             $output .= \str_repeat(' ', $this->indent);
             if ($y === 0 && $this->headerRow) {
-                $output .= '<color;fg=green>';
+                $output .= '<color;fg=token>';
             }
             foreach ($row as $x => $cell) {
                 $output .= $this->getCellOutput($x, $row);
@@ -70,6 +70,10 @@ final class Table implements \Stringable
 
     private function getCellOutput(int $index, array $row): string
     {
+        if ($index === \array_key_last($row)) {
+            return \sprintf(' %s', $row[$index]);
+        }
+
         $tagsLen = \strlen($row[$index]) - \strlen(\strip_tags($row[$index]));
         $output = \str_pad($row[$index], $this->columnWidths[$index] + $tagsLen, ' ');
 

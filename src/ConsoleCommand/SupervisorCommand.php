@@ -26,7 +26,7 @@ class SupervisorCommand extends Command
 
     final public static function getDescription(): string
     {
-        return 'Show supervisor status';
+        return 'List workers and processes';
     }
 
     public function execute(string $pidFile, string $socketFile): int
@@ -43,7 +43,7 @@ class SupervisorCommand extends Command
         }
         unset($processNetworkInfos);
 
-        echo "❯ Workers\n";
+        echo "<color;fg=brand;options=bold>❯ Workers</>\n";
 
         if (\count($workers) > 0) {
             echo (new Table(indent: 1))
@@ -58,10 +58,10 @@ class SupervisorCommand extends Command
                     $w->processCount,
                 ]));
         } else {
-            echo "  <color;bg=yellow> ! </> <color;fg=yellow>There are no workers</>\n";
+            echo "  No workers configured\n";
         }
 
-        echo "❯ Processes\n";
+        echo "<color;fg=brand;options=bold>❯ Processes</>\n";
 
         if (\count($processes) > 0) {
             \usort($processes, static fn(ProcessInfo $a, ProcessInfo $b) => $a->workerId <=> $b->workerId);
@@ -99,16 +99,16 @@ class SupervisorCommand extends Command
                             $requestCount === 0 ? '<color;fg=gray>0</>' : $requestCount
                         ),
                         $processNetworkInfo === null ? '<color;fg=gray>-</>' : (
-                            $rx === 0 && $tx === 0 ? \sprintf('<color;fg=gray>(%s / %s)</>', formatFileSize($rx), formatFileSize($tx)) : \sprintf('(%s / %s)', formatFileSize($rx), formatFileSize($tx))
+                            $rx === 0 && $tx === 0 ? \sprintf('<color;fg=gray>%s / %s</>', formatFileSize($rx), formatFileSize($tx)) : \sprintf('%s / %s', formatFileSize($rx), formatFileSize($tx))
                         ),
                         match (true) {
-                            $p->blocked => '[<color;fg=yellow>BLOCKED</>]',
-                            default => '[<color;fg=green>OK</>]',
+                            $p->blocked => '<color;fg=yellow>●</> BLOCKED',
+                            default => '<color;fg=green>●</> OK',
                         },
                     ];
                 }));
         } else {
-            echo "  <color;bg=yellow> ! </> <color;fg=yellow>There are no running processes</>\n";
+            echo "  No running processes\n";
         }
 
         return 0;

@@ -37,6 +37,8 @@ class StatusCommand extends Command
         $isRunning = isRunning($pidFile);
         $eventLoop = getDriverName();
         $startFile = getStartFile();
+        $startedRows = [];
+        $runtimeRows = [];
 
         if ($isRunning) {
             $bus = new SocketFileMessageBus($socketFile);
@@ -50,37 +52,28 @@ class StatusCommand extends Command
             /** @var array<ProcessInfo> $processInfos */
             $processInfos = $bus->dispatch(new GetProcessesCommand())->await();
 
-            $startedAt = $serverStatus->startedAt;
             $workersCount = \count($workerInfos);
             $processesCount = \count($processInfos);
             $totalMemory = \array_sum(\array_map(static fn(ProcessInfo $p): int => $p->memory, $processInfos));
-        } else {
-            $startedAt = new \DateTimeImmutable();
-            $workersCount = 0;
-            $processesCount = 0;
-            $totalMemory = 0;
+            $startedRows[] = ['Started', $serverStatus->startedAt->format('Y-m-d H:i:s T')];
+            $runtimeRows = [
+                ['Workers', $workersCount],
+                ['Processes', $processesCount],
+                ['Memory', formatFileSize($totalMemory)],
+            ];
         }
 
-        echo ($isRunning ? '<color;fg=green>●</> ' : '● ') . Server::TITLE . "\n";
+        echo \sprintf("<color;fg=brand;options=bold>❯ 🌸 %s</>\n", Server::NAME);
 
         $rows = [
-            [Server::NAME . ' version:', Server::getVersion()],
-            ['PHP version:', PHP_VERSION],
-            ['Event loop driver:', $eventLoop],
-            ['Start file:', $startFile],
-            ['Status:', $isRunning
-                ? '<color;fg=green>active</> since ' . $startedAt->format(\DateTimeInterface::RFC7231)
-                : 'inactive',
-            ],
+            ['Status', $isRunning ? '<color;fg=green>●</> RUNNING' : '<color;fg=red>●</> STOPPED'],
+            ...$startedRows,
+            ['Version', Server::getVersion()],
+            ['PHP', PHP_VERSION],
+            ['Event loop', $eventLoop],
+            ['Start file', $startFile],
+            ...$runtimeRows,
         ];
-
-        if ($isRunning) {
-            $rows = [...$rows, ...[
-                ['Worker count:', $workersCount],
-                ['Process count:', $processesCount],
-                ['Memory usage:', formatFileSize($totalMemory)],
-            ]];
-        }
 
         echo (new Table(indent: 1))->addRows($rows);
 

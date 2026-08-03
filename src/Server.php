@@ -15,7 +15,6 @@ final class Server
     public const PACKAGE = 'phpstreamserver/core';
     public const NAME = 'PHPStreamServer';
     public const SHORTNAME = 'phpss';
-    public const TITLE = '🌸 PHPStreamServer - PHP application server';
 
     /** @var array<Plugin> */
     private array $plugins = [];
