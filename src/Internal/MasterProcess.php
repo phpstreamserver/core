@@ -157,7 +157,10 @@ final class MasterProcess
         $stopCallback = fn(): null => $this->stop();
         $reloadCallback = fn(): null => $this->reload();
 
-        EventLoop::onSignal(SIGINT, $stopCallback);
+        EventLoop::onSignal(SIGINT, static function () use ($stopCallback): void {
+            StdoutHandler::clearCurrentLine();
+            $stopCallback();
+        });
         EventLoop::onSignal(SIGTERM, $stopCallback);
         EventLoop::onSignal(SIGHUP, $stopCallback);
         EventLoop::onSignal(SIGTSTP, $stopCallback);

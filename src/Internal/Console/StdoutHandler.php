@@ -13,12 +13,10 @@ use Amp\ByteStream\WritableResourceStream;
 final class StdoutHandler
 {
     private static WritableResourceStream|null $stdout = null;
-
     private static WritableResourceStream|null $stderr = null;
-
+    private static bool $stdoutIsTty = false;
     /** @var \Closure(string):string|null */
     private static \Closure|null $stdoutHandler = null;
-
     /** @var \Closure(string):string|null */
     private static \Closure|null $stderrHandler = null;
 
@@ -36,6 +34,7 @@ final class StdoutHandler
         $stderrResource = \is_string($stderr) ? \fopen($stderr, 'ab') : $stderr;
         self::$stdout = new WritableResourceStream($stdoutResource);
         self::$stderr = new WritableResourceStream($stderrResource);
+        self::$stdoutIsTty = \posix_isatty($stdoutResource);
         self::$stdoutHandler = $colors && Colorizer::hasColorSupport($stdoutResource) ? Colorizer::colorize(...) : Colorizer::stripTags(...);
         self::$stderrHandler = $colors && Colorizer::hasColorSupport($stderrResource) ? Colorizer::colorize(...) : Colorizer::stripTags(...);
         unset($stdoutResource, $stderrResource);
@@ -60,8 +59,16 @@ final class StdoutHandler
         \ob_start(static fn(): string => '', 1);
         self::$stdout = null;
         self::$stderr = null;
+        self::$stdoutIsTty = false;
         self::$stdoutHandler = null;
         self::$stderrHandler = null;
+    }
+
+    public static function clearCurrentLine(): void
+    {
+        if (self::$stdoutIsTty) {
+            self::$stdout->write("\r\e[2K");
+        }
     }
 
     public static function stdout(string $buffer): void
