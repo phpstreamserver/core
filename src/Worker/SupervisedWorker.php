@@ -122,6 +122,10 @@ class SupervisedWorker implements WorkerInterface
             ProcessIdentity::switchTo($this->user, $this->group);
         } catch (ProcessIdentityException $e) {
             $this->logger->error(\sprintf('Worker "%s" failed to change process identity: %s', $this->getName(), $e->getMessage()));
+            $this->onStartCallbacks = [];
+            $this->onStopCallbacks = [];
+            $this->onReloadCallbacks = [];
+            $this->stop(1);
         }
 
         $reloadStrategyStack = new ReloadStrategyStack($this->reload(...), $this->reloadStrategies);
