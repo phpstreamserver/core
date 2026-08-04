@@ -20,7 +20,7 @@ final class Colorizer
         'blue' => 4,
         'magenta' => 5,
         'cyan' => 6,
-        'white' => 7,
+        'white' => 15,
         'gray' => 8,
         'brand' => 168,
         'token' => 73,

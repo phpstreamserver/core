@@ -23,15 +23,15 @@ final class ConsoleLogger implements LoggerInterface
         | JSON_FORCE_OBJECT
     ;
 
-    private const LEVELS_COLOR_MAP = [
-        'debug' => 'fg=15',
-        'info' => 'fg=116',
-        'notice' => 'fg=38',
-        'warning' => 'fg=yellow',
-        'error' => 'fg=red',
-        'critical' => 'fg=red',
-        'alert' => 'fg=red',
-        'emergency' => 'fg=red',
+    private const LEVEL_MAP = [
+        'debug' => '<color;fg=gray>DEBUG</> ',
+        'info' => 'INFO  ',
+        'notice' => 'NOTICE',
+        'warning' => '<color;fg=yellow>WARN</>  ',
+        'error' => '<color;fg=red>ERROR</> ',
+        'critical' => '<color;fg=red>CRIT</>  ',
+        'alert' => '<color;fg=red>ALERT</> ',
+        'emergency' => '<color;fg=red>EMERG</> ',
     ];
 
     private ContextNormalizer $contextNormalizer;
@@ -52,18 +52,18 @@ final class ConsoleLogger implements LoggerInterface
 
     public function log(mixed $level, string|\Stringable $message, array $context = []): void
     {
-        $time = (new \DateTimeImmutable('now'))->format(\DateTimeInterface::RFC3339);
+        $now = new \DateTimeImmutable('now');
         $level = (string) $level;
         $message = (string) $message;
         $context = $this->contextNormalizer->normalize($context);
         $context = $context === [] ? '' : \json_encode($this->contextNormalizer->normalize($context), self::DEFAULT_JSON_FLAGS);
+        $errorLevel = self::LEVEL_MAP[\strtolower($level)] ?? $level;
 
         $message = \rtrim(\sprintf(
-            "[%s] <color;fg=green>%s</>.<color;%s>%s</> %s %s",
-            $time,
+            "%s %s <color;fg=white>%s</> › %s %s",
+            $now->format('Y-m-d H:i:s'),
+            $errorLevel,
             $this->channel,
-            self::LEVELS_COLOR_MAP[\strtolower($level)] ?? 'fg=gray',
-            \strtoupper($level),
             $message,
             $context,
         ));

@@ -211,7 +211,7 @@ final class MasterProcess
             }
 
             $this->status = Status::RUNNING;
-            $this->logger->info(Server::NAME . ' has started');
+            $this->logger->info(Server::NAME . ' started');
         });
     }
 
@@ -302,10 +302,10 @@ final class MasterProcess
         }
 
         $this->status = Status::STOPPING;
-        $this->logger->info(Server::NAME . ' stopping ...');
+        $this->logger->info(Server::NAME . ' stopping...');
         await(\array_map(static fn(Plugin $p) => $p->onStop(), $this->plugins));
         $this->status = Status::SHUTDOWN;
-        $this->logger->info(Server::NAME . ' has stopped');
+        $this->logger->info(Server::NAME . ' stopped');
         $this->suspension->resume($code);
     }
 
@@ -315,7 +315,7 @@ final class MasterProcess
             return;
         }
 
-        $this->logger->info(Server::NAME . ' reloading ...');
+        $this->logger->info(Server::NAME . ' reloading...');
 
         foreach ($this->plugins as $plugin) {
             EventLoop::queue(static function () use ($plugin): void {
