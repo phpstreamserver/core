@@ -67,7 +67,7 @@ final class StdoutHandler
     public static function clearCurrentLine(): void
     {
         if (self::$stdoutIsTty) {
-            self::$stdout->write("\r\e[2K");
+            self::$stdout?->write("\r\e[2K");
         }
     }
 
