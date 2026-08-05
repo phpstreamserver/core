@@ -16,6 +16,7 @@ use Amp\Socket\StaticSocketConnector;
 use Amp\Socket\UnixAddress;
 use Amp\TimeoutCancellation;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
+use Revolt\EventLoop;
 
 use function Amp\async;
 
@@ -27,11 +28,13 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
     private Socket|null $socket = null;
     private Future $dispatchTail;
     private bool $stopping = false;
+    private int $driverId;
 
     public function __construct(string $socketFile)
     {
         $this->connector = new StaticSocketConnector(new UnixAddress($socketFile), new DnsSocketConnector());
         $this->dispatchTail = Future::complete();
+        $this->driverId = \spl_object_id(EventLoop::getDriver());
     }
 
     /**
@@ -42,6 +45,14 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
      */
     public function dispatch(MessageInterface $message): Future
     {
+        $driverId = \spl_object_id(EventLoop::getDriver());
+        if ($this->driverId !== $driverId) {
+            $this->driverId = $driverId;
+            $this->socket?->close();
+            $this->socket = null;
+            $this->dispatchTail = Future::complete();
+        }
+
         if ($this->stopping) {
             return Future::error(new ConnectException('The master message bus is stopping'));
         }

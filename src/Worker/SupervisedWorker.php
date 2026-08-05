@@ -252,8 +252,11 @@ class SupervisedWorker implements WorkerInterface
             foreach ($this->onStopCallbacks as $onStopCallback) {
                 $onStopCallback($this);
             }
-            $this->bus->stop()->await();
-            EventLoop::getDriver()->stop();
+
+            EventLoop::defer(function (): void {
+                $this->bus->stop()->await();
+                EventLoop::getDriver()->stop();
+            });
         });
     }
 
@@ -275,8 +278,11 @@ class SupervisedWorker implements WorkerInterface
             foreach ($this->onReloadCallbacks as $onReloadCallback) {
                 $onReloadCallback($this);
             }
-            $this->bus->stop()->await();
-            EventLoop::getDriver()->stop();
+
+            EventLoop::defer(function (): void {
+                $this->bus->stop()->await();
+                EventLoop::getDriver()->stop();
+            });
         });
     }
 
