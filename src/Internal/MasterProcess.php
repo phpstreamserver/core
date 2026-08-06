@@ -29,7 +29,7 @@ use Revolt\EventLoop\Driver\StreamSelectDriver;
 use Revolt\EventLoop\Suspension;
 
 use function Amp\async;
-use function Amp\Future\await;
+use function Amp\Future\awaitAll;
 use function PHPStreamServer\Core\getStartFile;
 use function PHPStreamServer\Core\isRunning;
 
@@ -199,19 +199,24 @@ final class MasterProcess
         });
 
         EventLoop::queue(function (): void {
-            $futures = [];
-            foreach ($this->plugins as $plugin) {
-                $futures[] = async(static fn() => $plugin->onStart());
+            [$onStartExceptions] = awaitAll(\array_map(static fn(Plugin $plugin) => async(static fn() => $plugin->onStart()), $this->plugins));
+            foreach ($onStartExceptions as $pluginClass => $exception) {
+                $this->logger->critical(\sprintf('%s::onStart() failed: %s', $pluginClass, $exception->getMessage()), ['exception' => $exception]);
             }
-            await($futures);
-            unset($futures);
+
+            if ($onStartExceptions !== []) {
+                $this->stop(1);
+                return;
+            }
 
             $this->registerWorker(...$this->workers);
             unset($this->workers);
 
             EventLoop::defer(function (): void {
                 foreach ($this->plugins as $plugin) {
-                    async(static fn() => $plugin->afterStart());
+                    async(static fn() => $plugin->afterStart())->catch(function (\Throwable $e) use ($plugin): void {
+                        $this->logger->critical(\sprintf('%s::afterStart() failed: %s', $plugin::class, $e->getMessage()), ['exception' => $e]);
+                    });
                 }
                 $this->status = Status::RUNNING;
                 $this->logger->info(Server::NAME . ' started');
@@ -233,7 +238,13 @@ final class MasterProcess
             }
 
             foreach ($worker::handledBy() as $handledByPluginClass) {
-                $this->plugins[$handledByPluginClass]->registerWorker($worker);
+                try {
+                    $this->plugins[$handledByPluginClass]->registerWorker($worker);
+                } catch (\Throwable $e) {
+                    $this->logger->critical(\sprintf('%s::registerWorker() failed: %s', $handledByPluginClass, $e->getMessage()), ['exception' => $e]);
+                    $this->unregisterWorker($worker->getId());
+                    continue 2;
+                }
             }
         }
 
@@ -245,7 +256,11 @@ final class MasterProcess
     private function unregisterWorker(int $workerId): void
     {
         foreach ($this->plugins as $plugin) {
-            $plugin->unregisterWorker($workerId);
+            try {
+                $plugin->unregisterWorker($workerId);
+            } catch (\Throwable $e) {
+                $this->logger->critical(\sprintf('%s::unregisterWorker() failed: %s', $plugin::class, $e->getMessage()), ['exception' => $e]);
+            }
         }
     }
 
@@ -301,13 +316,18 @@ final class MasterProcess
 
     private function stop(int $code = 0): void
     {
-        if ($this->status !== Status::RUNNING) {
+        if ($this->status === Status::SHUTDOWN || $this->status === Status::STOPPING) {
             return;
         }
 
         $this->status = Status::STOPPING;
         $this->logger->info(Server::NAME . ' stopping...');
-        await(\array_map(static fn(Plugin $p) => $p->onStop(), $this->plugins));
+
+        [$onStopExceptions] = awaitAll(\array_map(static fn(Plugin $plugin) => $plugin->onStop(), $this->plugins));
+        foreach ($onStopExceptions as $pluginClass => $exception) {
+            $this->logger->critical(\sprintf('%s::onStop() failed: %s', $pluginClass, $exception->getMessage()), ['exception' => $exception]);
+        }
+
         $this->status = Status::SHUTDOWN;
         $this->logger->info(Server::NAME . ' stopped');
         $this->suspension->resume($code);
