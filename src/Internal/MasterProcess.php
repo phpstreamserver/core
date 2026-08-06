@@ -26,6 +26,7 @@ use Revolt\EventLoop;
 use Revolt\EventLoop\Driver\StreamSelectDriver;
 use Revolt\EventLoop\Suspension;
 
+use function Amp\async;
 use function Amp\Future\await;
 use function PHPStreamServer\Core\getStartFile;
 use function PHPStreamServer\Core\isRunning;
@@ -195,26 +196,23 @@ final class MasterProcess
             $this->unregisterWorker($command->workerId);
         });
 
-        foreach ($this->plugins as $plugin) {
-            EventLoop::queue(static function () use ($plugin) {
-                $plugin->onStart();
-            });
-        }
-
         EventLoop::queue(function (): void {
+            $futures = [];
+            foreach ($this->plugins as $plugin) {
+                $futures[] = async(static fn() => $plugin->onStart());
+            }
+            await($futures);
+
             $this->registerWorker(...$this->workers);
             unset($this->workers);
-        });
 
-        EventLoop::defer(function (): void {
-            foreach ($this->plugins as $plugin) {
-                EventLoop::queue(static function () use ($plugin): void {
-                    $plugin->afterStart();
-                });
-            }
-
-            $this->status = Status::RUNNING;
-            $this->logger->info(Server::NAME . ' started');
+            EventLoop::defer(function (): void {
+                foreach ($this->plugins as $plugin) {
+                    async(static fn() => $plugin->afterStart());
+                }
+                $this->status = Status::RUNNING;
+                $this->logger->info(Server::NAME . ' started');
+            });
         });
     }
 
