@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin\Supervisor;
 
-use Amp\Future;
 use PHPStreamServer\Core\ConsoleCommand\SupervisorCommand;
 use PHPStreamServer\Core\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
@@ -65,9 +64,9 @@ final class SupervisorPlugin extends Plugin
         $this->supervisor->unregisterWorker($workerId);
     }
 
-    public function onStop(): Future
+    public function onStop(): void
     {
-        return $this->supervisor->stop();
+        $this->supervisor->stop()->await();
     }
 
     public function onReload(): void

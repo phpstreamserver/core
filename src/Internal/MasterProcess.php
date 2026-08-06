@@ -323,7 +323,7 @@ final class MasterProcess
         $this->status = Status::STOPPING;
         $this->logger->info(Server::NAME . ' stopping...');
 
-        [$onStopExceptions] = awaitAll(\array_map(static fn(Plugin $plugin) => $plugin->onStop(), $this->plugins));
+        [$onStopExceptions] = awaitAll(\array_map(static fn(Plugin $plugin) => async(static fn() => $plugin->onStop()), $this->plugins));
         foreach ($onStopExceptions as $pluginClass => $exception) {
             $this->logger->critical(\sprintf('%s::onStop() failed: %s', $pluginClass, $exception->getMessage()), ['exception' => $exception]);
         }

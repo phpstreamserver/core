@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Plugin;
 
-use Amp\Future;
 use PHPStreamServer\Core\Console\Command;
 use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Internal\Status;
@@ -99,12 +98,11 @@ abstract class Plugin
     /**
      * Stops the plugin during master-process shutdown.
      *
-     * Returns a future that completes when the plugin has finished its shutdown work.
-     * The master waits for all plugin shutdown futures before exiting.
+     * Called during shutdown. May suspend until shutdown work is complete.
+     * The master waits for all plugins to stop before exiting.
      */
-    public function onStop(): Future
+    public function onStop(): void
     {
-        return Future::complete();
     }
 
     /**
