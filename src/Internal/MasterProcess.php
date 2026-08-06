@@ -204,6 +204,7 @@ final class MasterProcess
                 $futures[] = async(static fn() => $plugin->onStart());
             }
             await($futures);
+            unset($futures);
 
             $this->registerWorker(...$this->workers);
             unset($this->workers);
