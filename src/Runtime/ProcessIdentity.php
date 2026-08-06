@@ -2,13 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Internal;
+namespace PHPStreamServer\Core\Runtime;
 
 use PHPStreamServer\Core\Exception\ProcessIdentityException;
 
-/**
- * @internal
- */
 final class ProcessIdentity
 {
     private function __construct()

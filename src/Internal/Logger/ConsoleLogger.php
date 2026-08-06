@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal\Logger;
 
-use PHPStreamServer\Core\Internal\Console\StdoutHandler;
+use PHPStreamServer\Core\Console\StdoutHandler;
 use PHPStreamServer\Core\LoggerInterface;
 use Psr\Log\LoggerTrait;
 

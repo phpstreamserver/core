@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Internal\Console;
 
 use PHPStreamServer\Core\Console\Command;
+use PHPStreamServer\Core\Console\OptionDefinition;
 use PHPStreamServer\Core\Console\Options;
+use PHPStreamServer\Core\Console\StdoutHandler;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Exception\ServerIsNotRunning;
 use PHPStreamServer\Core\Exception\ServerIsRunning;

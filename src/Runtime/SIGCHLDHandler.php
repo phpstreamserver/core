@@ -2,13 +2,10 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Internal;
+namespace PHPStreamServer\Core\Runtime;
 
 use Revolt\EventLoop;
 
-/**
- * @internal
- */
 final class SIGCHLDHandler
 {
     private static bool $isRegistered = false;

@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Internal\Console;
+namespace PHPStreamServer\Core\Console;
 
-/**
- * @internal
- */
 final readonly class OptionDefinition
 {
     public function __construct(

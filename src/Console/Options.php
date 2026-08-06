@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Console;
 
-use PHPStreamServer\Core\Internal\Console\OptionDefinition;
-
 final class Options
 {
     private array $parsedOptions;

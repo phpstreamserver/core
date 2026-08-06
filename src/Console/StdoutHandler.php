@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Internal\Console;
+namespace PHPStreamServer\Core\Console;
 
 use Amp\ByteStream\WritableResourceStream;
+use PHPStreamServer\Core\Internal\Console\Colorizer;
 
 /**
  * Redirects standard output to a custom stream with colorization filters
- * @internal
  */
 final class StdoutHandler
 {
