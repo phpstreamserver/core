@@ -232,7 +232,6 @@ final class MasterProcess
         });
         EventLoop::onSignal(SIGTERM, $stopCallback);
         EventLoop::onSignal(SIGHUP, $stopCallback);
-        EventLoop::onSignal(SIGTSTP, $stopCallback);
         EventLoop::onSignal(SIGQUIT, $stopCallback);
         EventLoop::onSignal(SIGUSR1, $reloadCallback);
 
