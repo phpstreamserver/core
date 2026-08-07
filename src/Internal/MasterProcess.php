@@ -39,6 +39,7 @@ use function PHPStreamServer\Core\isRunning;
 final class MasterProcess
 {
     private const GC_PERIOD = 300;
+    private const DAEMON_WAIT_TIMEOUT_SECONDS = 10;
 
     private static bool $registered = false;
     private Suspension $suspension;
@@ -47,6 +48,11 @@ final class MasterProcess
     private LoggerInterface $logger;
     private ContainerInterface $masterContainer;
     private ContainerInterface $workerContainer;
+
+    /**
+     * @var resource|null
+     */
+    private mixed $daemonStartupSocket = null;
 
     /**
      * @var array<class-string<Plugin>, Plugin>
@@ -113,9 +119,9 @@ final class MasterProcess
             throw new PHPStreamServerException(\sprintf('%s is already running', Server::NAME));
         }
 
-        if ($daemonize && $this->doDaemonize()) {
+        if ($daemonize && (null !== $isDaemonStarted = $this->doDaemonize())) {
             // Runs in caller process
-            return 0;
+            return $isDaemonStarted ? 0 : 1;
         } elseif ($daemonize) {
             // Runs in daemonized master process
             StdoutHandler::suppress();
@@ -135,6 +141,66 @@ final class MasterProcess
         \assert(\is_int($ret));
         $this->onMasterShutdown();
         return $ret;
+    }
+
+    /**
+     * Forks the master process to run it as a daemon.
+     *
+     * @return bool|null true if daemon startup succeeded, false if it failed, or null in the daemonized child process
+     */
+    private function doDaemonize(): bool|null
+    {
+        $sockets = \stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+        if ($sockets === false) {
+            throw new PHPStreamServerException('Daemon startup socket creation failed');
+        }
+
+        [$parentSocket, $daemonSocket] = $sockets;
+        $pid = \pcntl_fork();
+
+        if ($pid === -1) {
+            \fclose($parentSocket);
+            \fclose($daemonSocket);
+            throw new PHPStreamServerException('Fork failed');
+        }
+
+        if ($pid > 0) {
+            // Original calling process
+            \fclose($daemonSocket);
+            \stream_set_timeout($parentSocket, self::DAEMON_WAIT_TIMEOUT_SECONDS);
+            $result = \fread($parentSocket, 1) ?: "\x01";
+            $isTimedOut = \stream_get_meta_data($parentSocket)['timed_out'];
+            \fclose($parentSocket);
+
+            if ($isTimedOut) {
+                \posix_kill(-$pid, SIGKILL);
+                \pcntl_waitpid($pid, $status);
+                return false;
+            }
+
+            return $result === "\x00";
+        }
+
+        // Daemon process
+        \fclose($parentSocket);
+        $this->daemonStartupSocket = $daemonSocket;
+
+        if (\posix_setsid() === -1) {
+            $this->reportDaemonStartup(false);
+            throw new PHPStreamServerException('Setsid failed');
+        }
+
+        return null;
+    }
+
+    private function reportDaemonStartup(bool $success): void
+    {
+        if ($this->daemonStartupSocket !== null) {
+            $socket = $this->daemonStartupSocket;
+            $this->daemonStartupSocket = null;
+            \fwrite($socket, $success ? "\x00" : "\x01");
+            \fclose($socket);
+        }
     }
 
     /**
@@ -205,6 +271,7 @@ final class MasterProcess
             }
 
             if ($onStartExceptions !== []) {
+                $this->reportDaemonStartup(false);
                 $this->stop(1);
                 return;
             }
@@ -220,6 +287,7 @@ final class MasterProcess
                 }
                 $this->status = Status::RUNNING;
                 $this->logger->info(Server::NAME . ' started');
+                $this->reportDaemonStartup(true);
             });
         });
     }
@@ -262,26 +330,6 @@ final class MasterProcess
                 $this->logger->critical(\sprintf('%s::unregisterWorker() failed: %s', $plugin::class, $e->getMessage()), ['exception' => $e]);
             }
         }
-    }
-
-    /**
-     * Forks the master process to run it as a daemon.
-     *
-     * @return bool true in the parent process and false in the daemonized child process
-     */
-    private function doDaemonize(): bool
-    {
-        $pid = \pcntl_fork();
-        if ($pid === -1) {
-            throw new PHPStreamServerException('Fork failed');
-        }
-        if ($pid > 0) {
-            return true;
-        }
-        if (\posix_setsid() === -1) {
-            throw new PHPStreamServerException('Setsid failed');
-        }
-        return false;
     }
 
     private function saveMasterPid(): void
@@ -351,6 +399,12 @@ final class MasterProcess
     // After forking a worker, free inherited master-process resources in the child process
     private function free(): void
     {
+        if ($this->daemonStartupSocket !== null) {
+            $socket = $this->daemonStartupSocket;
+            $this->daemonStartupSocket = null;
+            \fclose($socket);
+        }
+
         if ($this->messageHandler instanceof SocketFileMessageHandler) {
             $this->messageHandler->stop();
         }

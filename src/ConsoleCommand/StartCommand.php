@@ -92,6 +92,16 @@ class StartCommand extends Command
             echo "Press Ctrl+C to stop.\n";
         }
 
-        return $masterProcess->run($daemonize);
+        $exitCode = $masterProcess->run($daemonize);
+
+        if ($daemonize) {
+            if ($exitCode === 0) {
+                echo \sprintf("<color;fg=green;options=bold>✓</> %s daemon started\n", Server::NAME);
+            } else {
+                echo \sprintf("<color;fg=red;options=bold>✗</> %s daemon failed to start\n", Server::NAME);
+            }
+        }
+
+        return $exitCode;
     }
 }
