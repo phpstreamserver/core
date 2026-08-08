@@ -244,6 +244,7 @@ final class MasterProcess
 
         ErrorHandler::register($this->logger);
         EventLoop::setErrorHandler(ErrorHandler::handleException(...));
+        EventLoop::defer(fn () => ErrorHandler::swapLogger($this->logger));
 
         $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $command): void {
             $this->stop($command->code);

@@ -59,6 +59,13 @@ final class ErrorHandler
         self::$logger = $logger;
     }
 
+    public static function swapLogger(LoggerInterface $logger): void
+    {
+        if (self::$registered === true) {
+            self::$logger = $logger;
+        }
+    }
+
     public static function unregister(): void
     {
         if (self::$registered === false) {
