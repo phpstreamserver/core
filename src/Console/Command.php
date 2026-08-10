@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Console;
 
 use PHPStreamServer\Core\Plugin\Plugin;
+use PHPStreamServer\Core\Worker\WorkerFactory;
 use PHPStreamServer\Core\WorkerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Driver;
@@ -14,7 +15,7 @@ abstract class Command
     /**
      * @readonly
      * @internal
-     * @var \WeakMap<Driver, array{plugins: array<Plugin>, workers: array<WorkerInterface>, options: Options}>
+     * @var \WeakMap<Driver, array{plugins: array<Plugin>, workers: array<WorkerInterface>, workerFactories: array<WorkerFactory>, options: Options}>
      */
     public \WeakMap $map;
 
@@ -32,6 +33,14 @@ abstract class Command
     final protected function getWorkers(): array
     {
         return $this->map[EventLoop::getDriver()]['workers'];
+    }
+
+    /**
+     * @return array<WorkerFactory>
+     */
+    final protected function getWorkerFactories(): array
+    {
+        return $this->map[EventLoop::getDriver()]['workerFactories'];
     }
 
     final protected function addOptionDefinition(string $name, string|null $shortcut = null, string $description = '', string|null $default = null): void

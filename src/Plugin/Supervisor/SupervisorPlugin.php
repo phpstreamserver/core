@@ -56,7 +56,8 @@ final class SupervisorPlugin extends Plugin
 
     public function registerWorker(WorkerInterface $worker): void
     {
-        $this->supervisor->registerWorker($worker);
+        $factoryId = $this->masterContainer->getService('worker_factory_id_resolver')->__invoke($worker->getId());
+        $this->supervisor->registerWorker($worker, $factoryId);
     }
 
     public function unregisterWorker(int $workerId): void

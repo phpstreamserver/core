@@ -17,9 +17,12 @@ final class WorkerInfo
         public readonly int $id,
         public readonly string $name,
         public readonly string $user,
+        public readonly string $group,
         public string $status,
         public readonly int $processCount,
         public readonly bool $reloadable,
+        public readonly string|null $factoryId,
+        public readonly \DateTimeImmutable $startedAt,
     ) {
     }
 }

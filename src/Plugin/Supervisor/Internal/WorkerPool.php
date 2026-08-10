@@ -93,7 +93,7 @@ final class WorkerPool
         });
     }
 
-    public function addWorker(SupervisedWorker $worker): WorkerInfo
+    public function addWorker(SupervisedWorker $worker, string|null $factoryId): WorkerInfo
     {
         $id = $worker->getId();
         $this->workersById[$id] = $worker;
@@ -101,9 +101,12 @@ final class WorkerPool
             id: $id,
             name: $worker->getName(),
             user: $worker->getUser(),
+            group: $worker->getGroup(),
             status: WorkerInfo::STATUS_STARTING,
             processCount: $worker->count,
             reloadable: $worker->reloadable,
+            factoryId: $factoryId,
+            startedAt: new \DateTimeImmutable('now'),
         );
         $this->workerInfosById[$id] = $workerInfo;
 

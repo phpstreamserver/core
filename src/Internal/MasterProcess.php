@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal;
 
-use PHPStreamServer\Core\Command\RegisterWorkerCommand;
 use PHPStreamServer\Core\Command\ReloadServerCommand;
+use PHPStreamServer\Core\Command\StartWorkerCommand;
 use PHPStreamServer\Core\Command\StopServerCommand;
-use PHPStreamServer\Core\Command\UnregisterWorkerCommand;
+use PHPStreamServer\Core\Command\StopWorkerCommand;
 use PHPStreamServer\Core\Console\StdoutHandler;
 use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
@@ -21,6 +21,7 @@ use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Runtime\ErrorHandler;
 use PHPStreamServer\Core\Runtime\SIGCHLDHandler;
 use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\Worker\WorkerFactory;
 use PHPStreamServer\Core\WorkerInterface;
 use Psr\Container\ContainerInterface as PsrContainerInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
@@ -59,15 +60,19 @@ final class MasterProcess
      */
     private array $plugins = [];
 
+    private WorkerFactoryManager $workerFactoryManager;
+
     /**
      * @param array<Plugin> $plugins
      * @param array<WorkerInterface> $workers
+     * @param array<WorkerFactory> $workerFactories
      */
     public function __construct(
         private readonly string $pidFile,
         private readonly string $socketFile,
         array $plugins,
         private array $workers,
+        private array $workerFactories,
     ) {
         if (!\in_array(PHP_SAPI, ['cli', 'phpdbg', 'micro'], true)) {
             throw new PHPStreamServerException('Can only run in CLI mode');
@@ -221,6 +226,10 @@ final class MasterProcess
         $this->logger = &$this->masterContainer->getService(LoggerInterface::class);
         $this->messageHandler = &$this->masterContainer->getService(MessageHandlerInterface::class);
 
+        $this->workerFactoryManager = new WorkerFactoryManager(workerFactories: $this->workerFactories, logger: $this->logger);
+        $this->masterContainer->setService('worker_factory_id_resolver', $this->workerFactoryManager->getFactoryIdByWorkerId(...));
+        unset($this->workerFactories);
+
         $this->masterContainer->setParameter('pid', \posix_getpid());
 
         $stopCallback = fn(): null => $this->stop();
@@ -244,7 +253,7 @@ final class MasterProcess
 
         ErrorHandler::register($this->logger);
         EventLoop::setErrorHandler(ErrorHandler::handleException(...));
-        EventLoop::defer(fn () => ErrorHandler::swapLogger($this->logger));
+        EventLoop::defer(fn() => ErrorHandler::swapLogger($this->logger));
 
         $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $command): void {
             $this->stop($command->code);
@@ -254,14 +263,36 @@ final class MasterProcess
             $this->reload();
         });
 
-        $this->messageHandler->subscribe(RegisterWorkerCommand::class, function (RegisterWorkerCommand $command): int {
-            $this->registerWorker($command->worker);
+        $this->messageHandler->subscribe(StartWorkerCommand::class, function (StartWorkerCommand $command): int {
+            if ($this->status !== Status::RUNNING) {
+                return 0;
+            }
 
-            return $command->worker->getId();
+            $worker = $this->workerFactoryManager->createWorker($command->factoryId, $command->parameters);
+            if ($worker !== null) {
+                /** @psalm-suppress PossiblyUndefinedArrayOffset */
+                [$isRegisteredSuccessfully] = \array_values($this->registerWorkers([$worker]));
+                if ($isRegisteredSuccessfully) {
+                    $this->logger->info(\sprintf('Worker "%s" [ID:%d] started using WorkerFactory "%s"', $worker->getName(), $worker->getId(), $command->factoryId));
+                } else {
+                    return 0;
+                }
+            }
+
+            return $worker?->getId() ?? 0;
         });
 
-        $this->messageHandler->subscribe(UnregisterWorkerCommand::class, function (UnregisterWorkerCommand $command): void {
-            $this->unregisterWorker($command->workerId);
+        $this->messageHandler->subscribe(StopWorkerCommand::class, function (StopWorkerCommand $command): void {
+            if ($this->status !== Status::RUNNING) {
+                return;
+            }
+
+            if (null !== $worker = $this->workerFactoryManager->getWorkerById($command->workerId)) {
+                $this->logger->info(\sprintf('Worker "%s" [ID:%d] stopping...', $worker->getName(), $worker->getId()));
+                $this->unregisterWorker($worker->getId());
+            } else {
+                $this->logger->warning(\sprintf('Worker [ID:%d] was not found', $command->workerId));
+            }
         });
 
         EventLoop::queue(function (): void {
@@ -276,7 +307,7 @@ final class MasterProcess
                 return;
             }
 
-            $this->registerWorker(...$this->workers);
+            $this->registerWorkers($this->workers);
             unset($this->workers);
 
             EventLoop::defer(function (): void {
@@ -292,15 +323,22 @@ final class MasterProcess
         });
     }
 
-    private function registerWorker(WorkerInterface ...$workers): void
+    /**
+     * @param array<WorkerInterface> $workers
+     * @return array<int, bool>
+     */
+    private function registerWorkers(array $workers): array
     {
         /** @var array<class-string<WorkerInterface>, class-string<Plugin>> $cannotBeRegistered */
         $cannotBeRegistered = [];
+        $registrationStatus = [];
 
         foreach ($workers as $worker) {
+            $registrationStatus[$worker->getId()] = true;
             foreach ($worker::handledBy() as $handledByPluginClass) {
                 if (!isset($this->plugins[$handledByPluginClass])) {
                     $cannotBeRegistered[$worker::class] = $handledByPluginClass;
+                    $registrationStatus[$worker->getId()] = false;
                     continue 2;
                 }
             }
@@ -309,8 +347,9 @@ final class MasterProcess
                 try {
                     $this->plugins[$handledByPluginClass]->registerWorker($worker);
                 } catch (\Throwable $e) {
-                    $this->logger->critical(\sprintf('%s::registerWorker() failed: %s', $handledByPluginClass, $e->getMessage()), ['exception' => $e]);
                     $this->unregisterWorker($worker->getId());
+                    $registrationStatus[$worker->getId()] = false;
+                    $this->logger->critical(\sprintf('%s::registerWorker() failed: %s', $handledByPluginClass, $e->getMessage()), ['exception' => $e]);
                     continue 2;
                 }
             }
@@ -319,16 +358,19 @@ final class MasterProcess
         foreach ($cannotBeRegistered as $workerClass => $handledByClass) {
             $this->logger->error(\sprintf('Cannot register worker "%s": required plugin "%s" is missing', $workerClass, $handledByClass));
         }
+
+        return $registrationStatus;
     }
 
     private function unregisterWorker(int $workerId): void
     {
+        $logger = $this->logger;
         foreach ($this->plugins as $plugin) {
-            try {
+            async(static function () use ($plugin, $workerId) {
                 $plugin->unregisterWorker($workerId);
-            } catch (\Throwable $e) {
-                $this->logger->critical(\sprintf('%s::unregisterWorker() failed: %s', $plugin::class, $e->getMessage()), ['exception' => $e]);
-            }
+            })->catch(static function (\Throwable $e) use ($logger, $plugin): void {
+                $logger->critical(\sprintf('%s::unregisterWorker() failed: %s', $plugin::class, $e->getMessage()), ['exception' => $e]);
+            });
         }
     }
 
@@ -420,6 +462,7 @@ final class MasterProcess
         unset($this->logger);
         unset($this->masterContainer);
         unset($this->plugins);
+        unset($this->workerFactoryManager);
         unset($this->suspension);
 
         while (\ob_get_level() > 0) {

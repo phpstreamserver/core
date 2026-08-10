@@ -8,6 +8,9 @@ use PHPStreamServer\Core\Event\ProcessReplacedEvent;
 
 use function PHPStreamServer\Core\getAbsoluteBinaryPath;
 
+/**
+ * Runs an external command in supervised worker processes by replacing process with the executable
+ */
 final class ExecutableWorker extends SupervisedWorker
 {
     private readonly string $command;

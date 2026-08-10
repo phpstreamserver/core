@@ -32,6 +32,4 @@ interface WorkerInterface
     public function getContainer(): ContainerInterface;
 
     public function getMessageBus(): MessageBusInterface;
-
-    public function isSerializable(): bool;
 }

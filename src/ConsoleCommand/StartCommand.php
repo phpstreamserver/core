@@ -45,6 +45,7 @@ class StartCommand extends Command
             socketFile: $socketFile,
             plugins: $this->getPlugins(),
             workers: $this->getWorkers(),
+            workerFactories: $this->getWorkerFactories(),
         );
 
         /**

@@ -13,6 +13,7 @@ use PHPStreamServer\Core\Exception\ServerIsNotRunning;
 use PHPStreamServer\Core\Exception\ServerIsRunning;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Server;
+use PHPStreamServer\Core\Worker\WorkerFactory;
 use PHPStreamServer\Core\WorkerInterface;
 use Revolt\EventLoop;
 
@@ -30,9 +31,10 @@ final readonly class App
     /**
      * @param array<Plugin> $plugins
      * @param array<WorkerInterface> $workers
+     * @param array<WorkerFactory> $workerFactories
      * @psalm-suppress UndefinedVariable, PossiblyUndefinedVariable
      */
-    public function run(array &$plugins, array &$workers): int
+    public function run(array &$plugins, array &$workers, array &$workerFactories): int
     {
         $currentCommand = self::getCurrentCommand();
         $options = self::getOptions();
@@ -41,11 +43,14 @@ final readonly class App
         $map[EventLoop::getDriver()] = [
             'plugins' => $plugins,
             'workers' => $workers,
+            'workerFactories' => $workerFactories,
             'options' => $options,
         ];
 
         // Free memory
-        $plugins = $workers = [];
+        $plugins = [];
+        $workers = [];
+        $workerFactories = [];
 
         StdoutHandler::register('php://stdout', 'php://stderr', !$options->hasOption('no-color'), $options->hasOption('quiet'));
 

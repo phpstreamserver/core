@@ -78,10 +78,10 @@ final class Supervisor
         });
     }
 
-    public function registerWorker(SupervisedWorker $worker): void
+    public function registerWorker(SupervisedWorker $worker, string|null $factoryId): void
     {
         if ($this->pool->getWorkerById($worker->getId()) === null) {
-            $this->pool->addWorker($worker);
+            $this->pool->addWorker($worker, $factoryId);
             $this->startWorkers();
         } else {
             throw new PHPStreamServerException(\sprintf('Worker %d is already registered', $worker->getId()));
@@ -101,7 +101,7 @@ final class Supervisor
             unset($this->restartCallbackIds[$workerId]);
         }
 
-        $this->stopWorker($workerInfo);
+        $this->stopWorker($workerInfo)->await();
         $this->pool->removeWorker($workerId);
     }
 

@@ -28,6 +28,9 @@ use Revolt\EventLoop\DriverFactory;
 
 use function PHPStreamServer\Core\generateWorkerId;
 
+/**
+ * Runs long-lived PHP code in supervised worker processes
+ */
 class SupervisedWorker implements WorkerInterface
 {
     final public const HEARTBEAT_PERIOD = 2.5;
@@ -97,6 +100,8 @@ class SupervisedWorker implements WorkerInterface
         if ($onReload !== null) {
             $this->onReload($onReload);
         }
+
+        $this->id = generateWorkerId();
     }
 
     /**
@@ -205,7 +210,7 @@ class SupervisedWorker implements WorkerInterface
 
     public function getId(): int
     {
-        return $this->id ??= generateWorkerId();
+        return $this->id;
     }
 
     public function getPid(): int
@@ -316,10 +321,5 @@ class SupervisedWorker implements WorkerInterface
     {
         $this->onReloadCallbacks[$priority . ':' . \uniqid()] = $onReload;
         \ksort($this->onReloadCallbacks, SORT_NUMERIC);
-    }
-
-    public function isSerializable(): bool
-    {
-        return true;
     }
 }

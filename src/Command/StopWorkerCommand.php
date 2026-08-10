@@ -7,11 +7,11 @@ namespace PHPStreamServer\Core\Command;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 
 /**
- * Unregisters a worker using its assigned ID.
+ * Stops an on-demand worker by its worker ID
  *
  * @implements MessageInterface<null>
  */
-final readonly class UnregisterWorkerCommand implements MessageInterface
+final readonly class StopWorkerCommand implements MessageInterface
 {
     public function __construct(public int $workerId)
     {

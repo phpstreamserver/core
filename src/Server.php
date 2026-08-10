@@ -9,6 +9,7 @@ use PHPStreamServer\Core\Internal\Console\App;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\SupervisorPlugin;
 use PHPStreamServer\Core\Plugin\System\SystemPlugin;
+use PHPStreamServer\Core\Worker\WorkerFactory;
 
 final class Server
 {
@@ -21,6 +22,9 @@ final class Server
 
     /** @var array<WorkerInterface> */
     private array $workers = [];
+
+    /** @var array<WorkerFactory> */
+    private array $workerFactories = [];
 
     public function __construct(
         private string|null $pidFile = null,
@@ -52,10 +56,17 @@ final class Server
         return $this;
     }
 
+    public function addWorkerFactory(WorkerFactory ...$factories): self
+    {
+        \array_push($this->workerFactories, ...$factories);
+
+        return $this;
+    }
+
     public function run(): int
     {
         /** @psalm-suppress PossiblyNullArgument */
-        return (new App($this->pidFile, $this->socketFile))->run($this->plugins, $this->workers);
+        return (new App($this->pidFile, $this->socketFile))->run($this->plugins, $this->workers, $this->workerFactories);
     }
 
     public static function getVersion(): string
