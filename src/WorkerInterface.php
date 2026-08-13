@@ -21,8 +21,6 @@ interface WorkerInterface
 
     public function getId(): int;
 
-    public function getPid(): int;
-
     public function getName(): string;
 
     public function getUser(): string;

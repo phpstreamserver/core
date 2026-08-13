@@ -39,8 +39,8 @@ class SupervisedWorker implements WorkerInterface
 
     private Status $status = Status::SHUTDOWN;
     private int $exitCode = 0;
-    private readonly int $id;
-    private readonly int $pid;
+    protected readonly int $id;
+    protected readonly int $pid;
     private readonly string $name;
     private DeferredFuture|null $startingFuture;
     private readonly ReloadStrategyStack $reloadStrategyStack;
@@ -102,6 +102,8 @@ class SupervisedWorker implements WorkerInterface
         }
 
         $this->id = generateWorkerId();
+        /** @psalm-suppress DocblockTypeContradiction */
+        $this->name ??= 'worker ' . $this->id;
     }
 
     /**
@@ -158,7 +160,7 @@ class SupervisedWorker implements WorkerInterface
         });
 
         $bus = $this->bus;
-        $pid = $this->getPid();
+        $pid = $this->pid;
         $heartbeatEvent = static fn(): ProcessHeartbeatEvent => new ProcessHeartbeatEvent($pid, \memory_get_usage(), \hrtime(true));
         EventLoop::repeat(self::HEARTBEAT_PERIOD, static function () use ($bus, $heartbeatEvent): void {
             $bus->dispatch($heartbeatEvent());
@@ -213,14 +215,9 @@ class SupervisedWorker implements WorkerInterface
         return $this->id;
     }
 
-    public function getPid(): int
-    {
-        return $this->pid;
-    }
-
     public function getName(): string
     {
-        return $this->name ??= 'worker ' . $this->getId();
+        return $this->name;
     }
 
     final public function getUser(): string
