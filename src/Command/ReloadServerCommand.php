@@ -13,7 +13,7 @@ use PHPStreamServer\Core\MessageBus\MessageInterface;
  */
 final readonly class ReloadServerCommand implements MessageInterface
 {
-    public function __construct()
+    public function __construct(public bool $opcacheReset = false)
     {
     }
 }

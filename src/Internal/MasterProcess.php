@@ -260,7 +260,7 @@ final class MasterProcess
         });
 
         $this->messageHandler->subscribe(ReloadServerCommand::class, function (ReloadServerCommand $command): void {
-            $this->reload();
+            $this->reload($command->opcacheReset);
         });
 
         $this->messageHandler->subscribe(StartWorkerCommand::class, function (StartWorkerCommand $command): int {
@@ -423,13 +423,20 @@ final class MasterProcess
         $this->suspension->resume($code);
     }
 
-    private function reload(): void
+    private function reload(bool $opcacheReset = false): void
     {
         if ($this->status !== Status::RUNNING) {
             return;
         }
 
         $this->logger->info(Server::NAME . ' reloading...');
+
+        if ($opcacheReset && \function_exists('opcache_get_status') && \ini_get('opcache.enable_cli') === '1') {
+            $opcacheStatus = \opcache_get_status();
+            foreach ($opcacheStatus['scripts'] ?? [] as $file => $_) {
+                \opcache_invalidate($file, true);
+            }
+        }
 
         foreach ($this->plugins as $plugin) {
             EventLoop::queue(static function () use ($plugin): void {
