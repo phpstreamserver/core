@@ -17,6 +17,7 @@
         "php": ">=8.2",
         "ext-pcntl": "*",
         "ext-posix": "*",
+        "ext-ffi": "*",
         "amphp/amp": "^3.0",
         "amphp/byte-stream": "^2.1",
         "amphp/socket": "^2.3",

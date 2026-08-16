@@ -78,6 +78,10 @@ final class MasterProcess
             throw new PHPStreamServerException('Can only run in CLI mode');
         }
 
+        if (\ini_get('ffi.enable') !== 'preload' && !\filter_var(\ini_get('ffi.enable'), FILTER_VALIDATE_BOOL)) {
+            throw new PHPStreamServerException('FFI is disabled. Set the "ffi.enable" php.ini directive to "true" or "preload"');
+        }
+
         if (self::$registered) {
             throw new PHPStreamServerException('The server can only be instantiated once');
         }
@@ -431,7 +435,7 @@ final class MasterProcess
 
         $this->logger->info(Server::NAME . ' reloading...');
 
-        if ($opcacheReset && \function_exists('opcache_get_status') && \ini_get('opcache.enable_cli') === '1') {
+        if ($opcacheReset && \function_exists('opcache_get_status') && \filter_var(\ini_get('opcache.enable_cli'), FILTER_VALIDATE_BOOL)) {
             $opcacheStatus = \opcache_get_status();
             foreach ($opcacheStatus['scripts'] ?? [] as $file => $_) {
                 \opcache_invalidate($file, true);
