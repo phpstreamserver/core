@@ -29,6 +29,11 @@ final class SupervisorPlugin extends Plugin
     ) {
     }
 
+    public static function getDescription(): string
+    {
+        return 'Worker process supervisor';
+    }
+
     protected function beforeStart(): void
     {
         /** @var int $stopTimeout */

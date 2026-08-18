@@ -76,12 +76,12 @@ function getRunDirectory(): string
 
 function getDefaultPidFile(): string
 {
-    return \sprintf('%s/%s%s.pid', getRunDirectory(), Server::SHORTNAME, \hash('xxh32', getStartFile()));
+    return \sprintf('%s/%s-%s.pid', getRunDirectory(), Server::SHORTNAME, \hash('xxh32', getStartFile()));
 }
 
 function getDefaultSocketFile(): string
 {
-    return \sprintf('%s/%s%s.socket', getRunDirectory(), Server::SHORTNAME, \hash('xxh32', getStartFile()));
+    return \sprintf('%s/%s-%s.socket', getRunDirectory(), Server::SHORTNAME, \hash('xxh32', getStartFile()));
 }
 
 function getAbsoluteBinaryPath(string $binary): string

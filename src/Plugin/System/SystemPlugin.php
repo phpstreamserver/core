@@ -6,6 +6,7 @@ namespace PHPStreamServer\Core\Plugin\System;
 
 use PHPStreamServer\Core\Command\GetNetworkInfoCommand;
 use PHPStreamServer\Core\Command\GetServerStatusCommand;
+use PHPStreamServer\Core\ConsoleCommand\AboutCommand;
 use PHPStreamServer\Core\ConsoleCommand\ConnectionsCommand;
 use PHPStreamServer\Core\ConsoleCommand\ReloadCommand;
 use PHPStreamServer\Core\ConsoleCommand\StartCommand;
@@ -27,6 +28,11 @@ final class SystemPlugin extends Plugin
     public function __construct(
         private readonly int $stopTimeout,
     ) {
+    }
+
+    public static function getDescription(): string
+    {
+        return 'Core system services';
     }
 
     protected function beforeStart(): void
@@ -63,6 +69,7 @@ final class SystemPlugin extends Plugin
             new StopCommand(),
             new ReloadCommand(),
             new StatusCommand(),
+            new AboutCommand(),
             new ConnectionsCommand(),
         ];
     }

@@ -53,8 +53,6 @@ class StartCommand extends Command
          * @psalm-suppress UndefinedThisPropertyFetch, PossiblyNullFunctionCall
          */
         $workers = (fn(): array => $this->workers)->bindTo($masterProcess, $masterProcess)();
-        $workers = \array_filter(array: $workers, callback: static fn(WorkerInterface $worker) => $worker instanceof SupervisedWorker);
-
         $eventLoop = getDriverName();
 
         echo \sprintf("<color;fg=brand;options=bold>❯ 🌸 %s</>\n", Server::NAME);
@@ -64,7 +62,6 @@ class StartCommand extends Command
                 ['Version:', Server::getVersion()],
                 ['PHP:', PHP_VERSION],
                 ['Event loop:', $eventLoop],
-                ['Workers:', \count($workers)],
             ])
         ;
 
@@ -77,11 +74,14 @@ class StartCommand extends Command
                     'Worker',
                     'Count',
                 ])
-                ->addRows(\array_map(static function (SupervisedWorker $w): array {
+                ->addRows(\array_map(static function (WorkerInterface $w): array {
+                    $count = $w instanceof SupervisedWorker ? $w->count : 1;
+                    $user = $w->getUser();
+
                     return [
-                        $w->getUser() === 'root' ? $w->getUser() : "<color;fg=gray>{$w->getUser()}</>",
+                        $user === 'root' ? $user : "<color;fg=gray>{$user}</>",
                         $w->getName(),
-                        $w->count,
+                        $count,
                     ];
                 }, $workers))
             ;

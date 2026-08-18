@@ -49,6 +49,14 @@ abstract class Plugin
     }
 
     /**
+     * Returns a short human-readable description of the plugin.
+     */
+    public static function getDescription(): string
+    {
+        return 'PHPStreamServer plugin';
+    }
+
+    /**
      * Initializes the plugin before master-process startup.
      *
      * The service containers and current server status are available when this method is called.
