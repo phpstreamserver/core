@@ -12,7 +12,6 @@ use Amp\Socket\ResourceServerSocket;
 use Amp\Socket\ResourceServerSocketFactory;
 use Amp\Socket\UnixAddress;
 use Amp\TimeoutCancellation;
-use PHPStreamServer\Core\Command\GetProcessesCommand;
 use PHPStreamServer\Core\Internal\PeerCredentials;
 use PHPStreamServer\Core\MessageBus\AllowedClassesProviderInterface;
 use PHPStreamServer\Core\MessageBus\CompositeMessage;
@@ -21,7 +20,7 @@ use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 use PHPStreamServer\Core\MessageBus\MessageSource;
-use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
+use PHPStreamServer\Core\Runtime\ChildProcessRegistry;
 use PHPStreamServer\Core\Runtime\ProcessIdentity;
 use Revolt\EventLoop;
 
@@ -50,7 +49,7 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
     private array $allowedClasses = self::DEFAULT_ALLOWED_CLASSES;
     private string $recomputeClassesCallbackId = '';
 
-    public function __construct(string $socketFile)
+    public function __construct(string $socketFile, ChildProcessRegistry $childProcessRegistry)
     {
         $this->socket = (new ResourceServerSocketFactory(chunkSize: self::CHUNK_SIZE))->listen(
             address: new UnixAddress($socketFile),
@@ -62,17 +61,21 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
         $subscribers = &$this->subscribers;
         $allowedClasses = &$this->allowedClasses;
 
-        EventLoop::queue(function () use (&$subscribers, &$allowedClasses): void {
+        EventLoop::queue(function () use (&$subscribers, &$allowedClasses, $childProcessRegistry): void {
             while ($socket = $this->socket->accept()) {
                 $cred = PeerCredentials::get($socket->getResource());
+                if ($cred === null) {
+                    throw new \RuntimeException('Unable to retrieve message bus peer credentials');
+                }
 
-                $processes = $this->dispatch(new GetProcessesCommand())->await();
-                $processPids = \array_map(static fn(ProcessInfo $p): int => $p->pid, $processes);
                 $masterPid = \posix_getpid();
+                $masterUid = \posix_geteuid();
+
                 $context = new Context(
                     source: match (true) {
                         $cred->pid === $masterPid => MessageSource::MASTER,
-                        \in_array( $cred->pid, $processPids, true) => MessageSource::CHILD,
+                        $childProcessRegistry->contains($cred->pid) => MessageSource::CHILD,
+                        $cred->uid === 0 || $cred->uid === $masterUid => MessageSource::MANAGER,
                         default => MessageSource::EXTERNAL,
                     },
                     pid: $cred->pid,

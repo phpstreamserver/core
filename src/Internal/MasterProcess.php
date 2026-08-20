@@ -18,6 +18,7 @@ use PHPStreamServer\Core\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
+use PHPStreamServer\Core\Runtime\ChildProcessRegistry;
 use PHPStreamServer\Core\Runtime\ErrorHandler;
 use PHPStreamServer\Core\Runtime\SIGCHLDHandler;
 use PHPStreamServer\Core\Server;
@@ -97,9 +98,12 @@ final class MasterProcess
         // Init master container
         $this->masterContainer = new Container();
         $this->masterContainer->setService(Suspension::class, $this->suspension);
-        $this->masterContainer->registerService(MessageHandlerInterface::class, fn() => new SocketFileMessageHandler($this->socketFile));
+        $this->masterContainer->registerService(MessageHandlerInterface::class, function (Container $container): SocketFileMessageHandler {
+            return new SocketFileMessageHandler($this->socketFile, $container->getService(ChildProcessRegistry::class));
+        });
         $this->masterContainer->setAlias(MessageBusInterface::class, MessageHandlerInterface::class);
         $this->masterContainer->registerService(LoggerInterface::class, $defaultLogger = static fn() => new ConsoleLogger());
+        $this->masterContainer->registerService(ChildProcessRegistry::class, static fn() => new ChildProcessRegistry());
         $this->masterContainer->setParameter('pid_file', $this->pidFile);
         $this->masterContainer->setParameter('socket_file', $this->socketFile);
 

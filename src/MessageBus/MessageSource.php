@@ -6,7 +6,8 @@ namespace PHPStreamServer\Core\MessageBus;
 
 enum MessageSource
 {
-    case MASTER; // Master process
-    case CHILD; // Worker process
-    case EXTERNAL; // External proocess
+    case MASTER;   // Master process
+    case CHILD;    // Managed child process
+    case MANAGER;  // Authorized external process
+    case EXTERNAL; // Other external process
 }

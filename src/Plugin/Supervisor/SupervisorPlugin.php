@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Plugin\Supervisor;
 
 use PHPStreamServer\Core\ConsoleCommand\SupervisorCommand;
-use PHPStreamServer\Core\LoggerInterface;
-use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\MetricsHandler;
@@ -14,7 +12,6 @@ use PHPStreamServer\Core\Plugin\Supervisor\Internal\Supervisor;
 use PHPStreamServer\Core\Worker\SupervisedWorker;
 use PHPStreamServer\Core\WorkerInterface;
 use PHPStreamServer\Plugin\Metrics\RegistryInterface;
-use Revolt\EventLoop\Suspension;
 
 /**
  * @extends Plugin<SupervisedWorker>
@@ -43,12 +40,8 @@ final class SupervisorPlugin extends Plugin
 
     public function onStart(): void
     {
-        $suspension = $this->masterContainer->getService(Suspension::class);
-        $logger = &$this->masterContainer->getService(LoggerInterface::class);
-        $bus = $this->masterContainer->getService(MessageBusInterface::class);
         $this->handler = $this->masterContainer->getService(MessageHandlerInterface::class);
-
-        $this->supervisor->start($suspension, $logger, $bus, $this->handler);
+        $this->supervisor->start($this->masterContainer);
     }
 
     public function afterStart(): void

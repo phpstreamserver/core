@@ -9,16 +9,18 @@ use Amp\Future;
 use PHPStreamServer\Core\Command\GetProcessesCommand;
 use PHPStreamServer\Core\Command\GetWorkersCommand;
 use PHPStreamServer\Core\Command\StopServerCommand;
+use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Event\ProcessBlockedEvent;
 use PHPStreamServer\Core\Event\ProcessExitEvent;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
 use PHPStreamServer\Core\Internal\Status;
+use PHPStreamServer\Core\LoggerInterface;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;
+use PHPStreamServer\Core\Runtime\ChildProcessRegistry;
 use PHPStreamServer\Core\Runtime\SIGCHLDHandler;
 use PHPStreamServer\Core\Worker\SupervisedWorker;
-use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
 
@@ -38,6 +40,7 @@ final class Supervisor
     private LoggerInterface $logger;
     public MessageBusInterface $messageBus;
     public MessageHandlerInterface $messageHandler;
+    public ChildProcessRegistry $childProcessRegistry;
     public readonly WorkerPool $pool;
     private Suspension $suspension;
     private readonly float $restartDelay;
@@ -55,12 +58,13 @@ final class Supervisor
         $this->restartDelay = \max($restartDelay, 0);
     }
 
-    public function start(Suspension $suspension, LoggerInterface &$logger, MessageBusInterface &$messageBus, MessageHandlerInterface &$messageHandler): void
+    public function start(ContainerInterface $container): void
     {
-        $this->suspension = $suspension;
-        $this->logger = &$logger;
-        $this->messageBus = &$messageBus;
-        $this->messageHandler = &$messageHandler;
+        $this->suspension = $container->getService(Suspension::class);
+        $this->logger = &$container->getService(LoggerInterface::class);
+        $this->messageBus = &$container->getService(MessageBusInterface::class);
+        $this->messageHandler = &$container->getService(MessageHandlerInterface::class);
+        $this->childProcessRegistry = $container->getService(ChildProcessRegistry::class);
 
         SIGCHLDHandler::onChildProcessExit($this->onProcessStop(...));
         EventLoop::repeat(SupervisedWorker::HEARTBEAT_PERIOD, $this->monitorWorkerStatus(...));
@@ -273,6 +277,7 @@ final class Supervisor
     private function onProcessStart(int $workerId, int $pid): void
     {
         $this->pool->addProcess($workerId, $pid);
+        $this->childProcessRegistry->register($pid);
     }
 
     private function onProcessStop(int $pid, int $exitCode, int|null $terminationSignal): void
@@ -282,6 +287,7 @@ final class Supervisor
         }
 
         $this->pool->removeProcess($pid);
+        $this->childProcessRegistry->unregister($pid);
 
         $messageBus = $this->messageBus;
         EventLoop::queue(static function () use ($messageBus, $pid, $exitCode, $terminationSignal): void {
