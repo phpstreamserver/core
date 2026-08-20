@@ -62,6 +62,8 @@ final class MasterProcess
 
     private WorkerFactoryManager $workerFactoryManager;
 
+    private static array $devNullResources;
+
     /**
      * @param array<Plugin> $plugins
      * @param array<WorkerInterface> $workers
@@ -131,9 +133,6 @@ final class MasterProcess
         if ($daemonize && (null !== $isDaemonStarted = $this->doDaemonize())) {
             // Runs in caller process
             return $isDaemonStarted ? 0 : 1;
-        } elseif ($daemonize) {
-            // Runs in daemonized master process
-            StdoutHandler::suppress();
         }
 
         // Master process context
@@ -198,6 +197,28 @@ final class MasterProcess
             $this->reportDaemonStartup(false);
             throw new PHPStreamServerException('Setsid failed');
         }
+
+        StdoutHandler::suppress();
+
+        /** @psalm-suppress RedundantCondition, InvalidPassByReference */
+        if (\is_resource(\STDIN)) {
+            \fclose(\STDIN);
+        }
+        /** @psalm-suppress RedundantCondition, InvalidPassByReference */
+        if (\is_resource(\STDOUT)) {
+            \fclose(\STDOUT);
+        }
+        /** @psalm-suppress RedundantCondition, InvalidPassByReference */
+        if (\is_resource(\STDERR)) {
+            \fclose(\STDERR);
+        }
+
+        // Keep references alive so GC does not close them
+        self::$devNullResources = [
+            \fopen('/dev/null', 'r'),
+            \fopen('/dev/null', 'ab'),
+            \fopen('/dev/null', 'ab'),
+        ];
 
         return null;
     }
