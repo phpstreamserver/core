@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Event;
 
+use PHPStreamServer\Core\MessageBus\AllowedClassesProviderInterface;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 use PHPStreamServer\Core\Plugin\System\Connection;
 
 /**
  * @implements MessageInterface<null>
  */
-final readonly class NetworkTrafficDeltaEvent implements MessageInterface
+final readonly class NetworkTrafficDeltaEvent implements MessageInterface, AllowedClassesProviderInterface
 {
     /**
      * @param array<int, Connection> $createdConnections
@@ -48,5 +49,12 @@ final readonly class NetworkTrafficDeltaEvent implements MessageInterface
         $this->rxTrafficByConnection = $data[3];
         $this->txTrafficByConnection = $data[4];
         $this->requests = $data[5];
+    }
+
+    public static function getAllowedClasses(): array
+    {
+        return [
+            Connection::class,
+        ];
     }
 }

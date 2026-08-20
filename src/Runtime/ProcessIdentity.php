@@ -14,12 +14,22 @@ final class ProcessIdentity
 
     public static function getEffectiveUser(): string
     {
-        return (\posix_getpwuid(\posix_geteuid()) ?: [])['name'] ?? (string) \posix_geteuid();
+        return self::getUserBuUid(\posix_geteuid());
     }
 
     public static function getEffectiveGroup(): string
     {
-        return (\posix_getgrgid(\posix_getegid()) ?: [])['name'] ?? (string) \posix_getegid();
+        return self::getGroupBuGid(\posix_getegid());
+    }
+
+    public static function getUserBuUid(int $uid): string
+    {
+        return (\posix_getpwuid($uid) ?: [])['name'] ?? (string) $uid;
+    }
+
+    public static function getGroupBuGid(int $gid): string
+    {
+        return (\posix_getgrgid($gid) ?: [])['name'] ?? (string) $gid;
     }
 
     /**
