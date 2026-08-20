@@ -60,7 +60,13 @@ function reportErrors(): bool
 
 function isRunning(string $pidFile): bool
 {
-    return (0 !== $pid = getPid($pidFile)) && \posix_kill($pid, 0);
+    $pid = getPid($pidFile);
+
+    if ($pid === 0) {
+        return false;
+    }
+
+    return \posix_kill($pid, 0) || \posix_get_last_error() === \PCNTL_EPERM;
 }
 
 function getPid(string $pidFile): int

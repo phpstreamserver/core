@@ -416,6 +416,8 @@ final class MasterProcess
         if (false === \file_put_contents($this->pidFile, (string) \posix_getpid())) {
             throw new PHPStreamServerException(\sprintf('Cannot save PID to %s', $this->pidFile));
         }
+
+        \chmod($this->pidFile, 0644);
     }
 
     private function onMasterShutdown(): void
