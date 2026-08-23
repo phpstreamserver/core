@@ -14,8 +14,10 @@ use Amp\Socket\UnixAddress;
 use Amp\TimeoutCancellation;
 use PHPStreamServer\Core\Internal\PeerCredentials;
 use PHPStreamServer\Core\MessageBus\AllowedClassesProviderInterface;
+use PHPStreamServer\Core\MessageBus\AuthorizedSources;
 use PHPStreamServer\Core\MessageBus\CompositeMessage;
 use PHPStreamServer\Core\MessageBus\Context;
+use PHPStreamServer\Core\MessageBus\MessageBusException;
 use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
@@ -25,12 +27,16 @@ use PHPStreamServer\Core\Runtime\ProcessIdentity;
 use Revolt\EventLoop;
 
 use function Amp\async;
+use function Amp\Future\await;
 
 final class SocketFileMessageHandler implements MessageHandlerInterface, MessageBusInterface
 {
     use MessageBusTrait;
 
+    private const MAX_EXTERNAL_CONNECTIONS = 32;
+
     private const DEFAULT_ALLOWED_CLASSES = [
+        CompositeMessage::class,
         \DateTimeImmutable::class,
         \DateTime::class,
         \DateTimeZone::class,
@@ -40,11 +46,17 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
     ];
 
     private ResourceServerSocket $socket;
+    private int $externalConnections = 0;
 
     /**
      * @var array<class-string<MessageInterface>, array<int, \Closure(MessageInterface, Context): mixed>>
      */
     private array $subscribers = [];
+
+    /**
+     * @var array<class-string<MessageInterface>, array<MessageSource>>
+     */
+    private array $authorizedSourcesForMessage = [];
 
     private array $allowedClasses = self::DEFAULT_ALLOWED_CLASSES;
     private string $recomputeClassesCallbackId = '';
@@ -58,11 +70,9 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
 
         \chmod($socketFile, 0666);
 
-        $subscribers = &$this->subscribers;
-        $allowedClasses = &$this->allowedClasses;
-
-        EventLoop::queue(function () use (&$subscribers, &$allowedClasses, $childProcessRegistry): void {
+        EventLoop::queue(function () use ($childProcessRegistry): void {
             while ($socket = $this->socket->accept()) {
+                /** @psalm-suppress PossiblyInvalidArgument */
                 $cred = PeerCredentials::get($socket->getResource());
                 if ($cred === null) {
                     throw new \RuntimeException('Unable to retrieve message bus peer credentials');
@@ -85,7 +95,17 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
                     group: ProcessIdentity::getGroupBuGid($cred->gid),
                 );
 
-                async(static function () use ($socket, &$subscribers, $masterPid, $context, &$allowedClasses): void {
+                $isExternal = $context->source === MessageSource::EXTERNAL;
+                if ($isExternal && $this->externalConnections >= self::MAX_EXTERNAL_CONNECTIONS) {
+                    $socket->close();
+                    continue;
+                }
+
+                if ($isExternal) {
+                    $this->externalConnections++;
+                }
+
+                async(function () use ($socket, $masterPid, $context, $isExternal): void {
                     try {
                         $handshake = self::readExactly($socket, \strlen(self::HANDSHAKE), new TimeoutCancellation(self::PROTOCOL_READ_TIMEOUT, 'Message bus handshake timed out'));
                         if ($handshake !== self::HANDSHAKE) {
@@ -95,20 +115,12 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
                         $socket->write(self::HANDSHAKE);
 
                         while (true) {
-                            $firstByte = $socket->read(limit: 1);
-                            if ($firstByte === null) {
+                            $data = self::readFrame($socket);
+                            if ($data === null) {
                                 break;
                             }
 
-                            $header = $firstByte . self::readExactly($socket, 5, new TimeoutCancellation(self::PROTOCOL_READ_TIMEOUT, 'Message header timed out'));
-                            ['size' => $size, 'gzip' => $compressed] = \unpack('Vsize/vgzip', $header);
-                            $data = self::readExactly($socket, $size, new TimeoutCancellation(self::PAYLOAD_READ_TIMEOUT, 'Message frame timed out'));
-
-                            if ($compressed) {
-                                $data = \gzinflate($data);
-                            }
-
-                            $message = \unserialize($data, ['allowed_classes' => $allowedClasses]);
+                            $message = \unserialize($data, ['allowed_classes' => $this->allowedClasses]);
 
                             if ($message instanceof \__PHP_Incomplete_Class) {
                                 $className = ((array) $message)['__PHP_Incomplete_Class_Name'] ?? 'unknown';
@@ -119,40 +131,27 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
                                 break;
                             }
 
-                            $return = null;
+                            $response = $this->dispatchWithContext($message, $context)->await();
+                            $serializedMessage = \serialize($response);
 
-                            foreach ($subscribers[$message::class] ?? [] as $subscriber) {
-                                if (null !== $subscriberReturn = $subscriber($message, $context)) {
-                                    $return = $subscriberReturn;
-                                    break;
-                                }
+                            if (\strlen($serializedMessage) > self::MAX_PAYLOAD_SIZE) {
+                                $serializedMessage = \serialize(new MessageBusResponse(error: 'Message bus response exceeds the maximum payload size'));
                             }
 
-                            $serializedMessage = \serialize($return);
-                            $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > self::COMPRESS_FROM;
-
-                            if ($compressMessage) {
-                                $serializedMessage = \gzdeflate($serializedMessage, 1);
-                            }
-
-                            $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
-
-                            $socket->write($payload);
+                            $socket->write(self::encodeFrame($serializedMessage));
                         }
                     } catch (CancelledException|StreamException) {
                         // The socket was closed
                     } finally {
+                        if ($isExternal) {
+                            $this->externalConnections--;
+                        }
+
                         if (\posix_getpid() === $masterPid) {
                             $socket->end();
                         }
                     }
                 });
-            }
-        });
-
-        $this->subscribe(CompositeMessage::class, function (CompositeMessage $event): void {
-            foreach ($event->messages as $message) {
-                $this->dispatch($message)->await();
             }
         });
     }
@@ -201,8 +200,6 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
      */
     public function dispatch(MessageInterface $message): Future
     {
-        $subscribers = &$this->subscribers;
-
         $pid = \posix_getpid();
         $uid = \posix_geteuid();
         $gid = \posix_getegid();
@@ -215,15 +212,66 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
             group: ProcessIdentity::getGroupBuGid($gid),
         );
 
-        return async(static function () use (&$subscribers, &$message, $context): mixed {
+        return async(function () use ($message, $context): mixed {
+            $response = $this->dispatchWithContext($message, $context)->await();
+            if ($response->error !== null) {
+                throw new MessageBusException($response->error);
+            }
+
+            return $response->result;
+        });
+    }
+
+    /**
+     * @return Future<MessageBusResponse>
+     */
+    private function dispatchWithContext(MessageInterface $message, Context $context): Future
+    {
+        $subscribers = &$this->subscribers;
+
+        $authorizedSources = $this->getAuthorizedSourcesForMessage($message);
+        if ($authorizedSources !== [] && !\in_array($context->source, $authorizedSources, true)) {
+            return Future::complete(new MessageBusResponse(error: 'Permission denied'));
+        }
+
+        if ($message instanceof CompositeMessage) {
+            $futures = [];
+            foreach ($message->messages as $nestedMessage) {
+                $futures[] = $this->dispatchWithContext($nestedMessage, $context);
+            }
+
+            return async(static function () use ($futures): MessageBusResponse {
+                foreach (await($futures) as $response) {
+                    if ($response->error !== null) {
+                        return $response;
+                    }
+                }
+
+                return new MessageBusResponse(result: null);
+            });
+        }
+
+        return async(static function () use (&$subscribers, &$message, $context): MessageBusResponse {
             foreach ($subscribers[$message::class] ?? [] as $subscriber) {
                 if (null !== $subscriberReturn = $subscriber($message, $context)) {
-                    return $subscriberReturn;
+                    return new MessageBusResponse(result: $subscriberReturn);
                 }
             }
 
-            return null;
+            return new MessageBusResponse(result: null);
         });
+    }
+
+    private function getAuthorizedSourcesForMessage(MessageInterface $message): array
+    {
+        if (isset($this->authorizedSourcesForMessage[$message::class])) {
+            return $this->authorizedSourcesForMessage[$message::class];
+        }
+
+        $authorizedSourcesAttr = (new \ReflectionClass($message::class))->getAttributes(AuthorizedSources::class)[0] ?? null;
+        $sources = $authorizedSourcesAttr?->newInstance()->sources ?? [];
+
+        return $this->authorizedSourcesForMessage[$message::class] = $sources;
     }
 
     private function recomputeAllowedClasses(): void

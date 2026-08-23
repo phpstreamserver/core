@@ -11,6 +11,7 @@ use PHPStreamServer\Core\Console\StdoutHandler;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Exception\ServerIsNotRunning;
 use PHPStreamServer\Core\Exception\ServerIsRunning;
+use PHPStreamServer\Core\MessageBus\MessageBusException;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Worker\WorkerFactory;
@@ -82,6 +83,9 @@ final readonly class App
                 return 1;
             } catch (ServerIsRunning) {
                 echo \sprintf("<color;fg=red;options=bold>✗</> %s is already running\n", Server::NAME);
+                return 1;
+            } catch (MessageBusException $e) {
+                echo \sprintf("<color;fg=red;options=bold>✗</> Error: %s\n", $e->getMessage());
                 return 1;
             }
         }

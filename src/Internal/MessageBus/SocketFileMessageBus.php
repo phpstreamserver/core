@@ -15,6 +15,7 @@ use Amp\Socket\SocketConnector;
 use Amp\Socket\StaticSocketConnector;
 use Amp\Socket\UnixAddress;
 use Amp\TimeoutCancellation;
+use PHPStreamServer\Core\MessageBus\MessageBusException;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 use Revolt\EventLoop;
 
@@ -67,24 +68,25 @@ final class SocketFileMessageBus implements GracefulMessageBusInterface
                 $socket = $this->getSocket();
 
                 $serializedMessage = \serialize($message);
-                $compressMessage = \extension_loaded('zlib') && \strlen($serializedMessage) > self::COMPRESS_FROM;
-
-                if ($compressMessage) {
-                    $serializedMessage = \gzdeflate($serializedMessage, 1);
+                if (\strlen($serializedMessage) > self::MAX_PAYLOAD_SIZE) {
+                    throw new MessageBusException('Message exceeds the maximum payload size');
                 }
 
-                $payload = \pack('Vva*', \strlen($serializedMessage), (int) $compressMessage, $serializedMessage);
-                $socket->write($payload);
+                $socket->write(self::encodeFrame($serializedMessage));
 
-                $header = self::readExactly($socket, 6, new TimeoutCancellation(self::PAYLOAD_READ_TIMEOUT, 'Message header timed out'));
-                ['size' => $size, 'gzip' => $compressed] = \unpack('Vsize/vgzip', $header);
-                $data = self::readExactly($socket, $size, new TimeoutCancellation(self::PAYLOAD_READ_TIMEOUT, 'Message frame timed out'));
-
-                if ($compressed) {
-                    $data = \gzinflate($data);
+                $data = self::readFrame($socket, new TimeoutCancellation(self::PAYLOAD_READ_TIMEOUT, 'Message header timed out'));
+                if ($data === null) {
+                    throw new StreamException('Socket closed before receiving message bus response');
                 }
 
-                return \unserialize($data);
+                $response = \unserialize($data);
+                \assert($response instanceof MessageBusResponse);
+
+                if ($response->error !== null) {
+                    throw new MessageBusException($response->error);
+                }
+
+                return $response->result;
             } catch (CancelledException|StreamException $e) {
                 $this->socket?->close();
                 $this->socket = null;

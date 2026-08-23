@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Event;
 
 use PHPStreamServer\Core\MessageBus\AllowedClassesProviderInterface;
+use PHPStreamServer\Core\MessageBus\AuthorizedSources;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
+use PHPStreamServer\Core\MessageBus\MessageSource;
 use PHPStreamServer\Core\Plugin\System\Connection;
 
 /**
  * @implements MessageInterface<null>
  */
+#[AuthorizedSources(MessageSource::CHILD)]
 final readonly class NetworkTrafficDeltaEvent implements MessageInterface, AllowedClassesProviderInterface
 {
     /**

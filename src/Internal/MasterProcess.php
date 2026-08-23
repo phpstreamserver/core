@@ -285,7 +285,7 @@ final class MasterProcess
         EventLoop::defer(fn() => ErrorHandler::swapLogger($this->logger));
 
         $this->messageHandler->subscribe(StopServerCommand::class, function (StopServerCommand $command): void {
-            $this->stop($command->code);
+            EventLoop::defer(fn() => $this->stop($command->code));
         });
 
         $this->messageHandler->subscribe(ReloadServerCommand::class, function (ReloadServerCommand $command): void {

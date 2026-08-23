@@ -9,6 +9,7 @@ namespace PHPStreamServer\Core\MessageBus;
  *
  * @implements MessageInterface<void>
  */
+#[AuthorizedSources(MessageSource::MASTER, MessageSource::CHILD, MessageSource::MANAGER)]
 final readonly class CompositeMessage implements MessageInterface
 {
     public function __construct(
