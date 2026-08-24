@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core;
 
 use Composer\InstalledVersions;
-use PHPStreamServer\Core\Internal\Console\App;
+use PHPStreamServer\Core\Console\CommandContext;
+use PHPStreamServer\Core\Internal\Console\ConsoleApplication;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\SupervisorPlugin;
 use PHPStreamServer\Core\Plugin\System\SystemPlugin;
@@ -17,6 +18,9 @@ final class Server
     public const NAME = 'PHPStreamServer';
     public const SHORTNAME = 'phpss';
 
+    private string $pidFile;
+    private string $socketFile;
+
     /** @var array<Plugin> */
     private array $plugins = [];
 
@@ -27,13 +31,13 @@ final class Server
     private array $workerFactories = [];
 
     public function __construct(
-        private string|null $pidFile = null,
-        private string|null $socketFile = null,
+        string|null $pidFile = null,
+        string|null $socketFile = null,
         int|null $stopTimeout = null,
         float|null $restartDelay = null,
     ) {
-        $this->pidFile ??= namespace\getDefaultPidFile();
-        $this->socketFile ??= namespace\getDefaultSocketFile();
+        $this->pidFile = $pidFile ?? namespace\getDefaultPidFile();
+        $this->socketFile = $socketFile ?? namespace\getDefaultSocketFile();
         $this->addPlugin(new SystemPlugin(stopTimeout: $stopTimeout ?? 10));
         $this->addPlugin(new SupervisorPlugin(restartDelay: $restartDelay ?? 0.25));
     }
@@ -65,8 +69,13 @@ final class Server
 
     public function run(): int
     {
-        /** @psalm-suppress PossiblyNullArgument */
-        return (new App($this->pidFile, $this->socketFile))->run($this->plugins, $this->workers, $this->workerFactories);
+        $context = new CommandContext($this->pidFile, $this->socketFile, $this->plugins, $this->workers, $this->workerFactories);
+        $this->plugins = [];
+        $this->workers = [];
+        $this->workerFactories = [];
+        unset($this->pidFile, $this->socketFile);
+
+        return (new ConsoleApplication())->run($context, $_SERVER['argv'] ?? []);
     }
 
     public static function getVersion(): string

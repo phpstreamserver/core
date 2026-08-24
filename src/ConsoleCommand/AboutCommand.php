@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\ConsoleCommand;
 
 use PHPStreamServer\Core\Console\Command;
+use PHPStreamServer\Core\Console\CommandContext;
+use PHPStreamServer\Core\Console\Options;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Server;
@@ -27,11 +29,11 @@ class AboutCommand extends Command
         return 'Show server information';
     }
 
-    public function execute(string $pidFile, string $socketFile): int
+    public function execute(CommandContext $context, Options $options): int
     {
-        $plugins = $this->getPlugins();
-        $workers = $this->getWorkers();
-        $workerFactories = $this->getWorkerFactories();
+        $plugins = $context->getPlugins();
+        $workers = $context->getWorkers();
+        $workerFactories = $context->getWorkerFactories();
 
         echo \sprintf("<color;fg=brand;options=bold>❯ 🌸 %s</>\n", Server::NAME);
         echo "  PHP application server and process manager\n";
@@ -43,8 +45,8 @@ class AboutCommand extends Command
                 ['PHP:', PHP_VERSION],
                 ['Event loop:', getDriverName()],
                 ['Start file:', getStartFile()],
-                ['PID file:', $pidFile],
-                ['Socket file:', $socketFile],
+                ['PID file:', $context->pidFile],
+                ['Socket file:', $context->socketFile],
             ])
         ;
 

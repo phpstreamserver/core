@@ -8,6 +8,8 @@ use PHPStreamServer\Core\Command\GetProcessesCommand;
 use PHPStreamServer\Core\Command\GetServerStatusCommand;
 use PHPStreamServer\Core\Command\GetWorkersCommand;
 use PHPStreamServer\Core\Console\Command;
+use PHPStreamServer\Core\Console\CommandContext;
+use PHPStreamServer\Core\Console\Options;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Internal\MessageBus\SocketFileMessageBus;
 use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
@@ -32,16 +34,14 @@ class StatusCommand extends Command
         return 'Show server status';
     }
 
-    public function execute(string $pidFile, string $socketFile): int
+    public function execute(CommandContext $context, Options $options): int
     {
-        $isRunning = isRunning($pidFile);
-        $eventLoop = getDriverName();
-        $startFile = getStartFile();
+        $isRunning = isRunning($context->pidFile);
         $startedRows = [];
         $runtimeRows = [];
 
         if ($isRunning) {
-            $bus = new SocketFileMessageBus($socketFile);
+            $bus = new SocketFileMessageBus($context->socketFile);
 
             /** @var ServerStatus $serverStatus */
             $serverStatus = $bus->dispatch(new GetServerStatusCommand())->await();
@@ -70,8 +70,8 @@ class StatusCommand extends Command
             ...$startedRows,
             ['Version', Server::getVersion()],
             ['PHP', PHP_VERSION],
-            ['Event loop', $eventLoop],
-            ['Start file', $startFile],
+            ['Event loop', getDriverName()],
+            ['Start file', getStartFile()],
             ...$runtimeRows,
         ];
 

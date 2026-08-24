@@ -500,6 +500,8 @@ final class MasterProcess
         unset($this->logger);
         unset($this->masterContainer);
         unset($this->plugins);
+        unset($this->workers);
+        unset($this->workerFactories);
         unset($this->workerFactoryManager);
         unset($this->suspension);
 

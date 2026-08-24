@@ -11,6 +11,7 @@ final readonly class OptionDefinition
         public string|null $shortName = null,
         public string $description = '',
         public string|null $default = null,
+        public bool $requiresValue = false,
     ) {
     }
 }

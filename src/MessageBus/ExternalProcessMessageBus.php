@@ -14,7 +14,7 @@ final class ExternalProcessMessageBus implements MessageBusInterface
 {
     private MessageBusInterface|null $bus = null;
 
-    public function __construct(private string $pidFile, private string $socketFile)
+    public function __construct(private readonly string $pidFile, private readonly string $socketFile)
     {
     }
 

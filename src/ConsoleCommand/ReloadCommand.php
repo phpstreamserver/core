@@ -6,6 +6,8 @@ namespace PHPStreamServer\Core\ConsoleCommand;
 
 use PHPStreamServer\Core\Command\ReloadServerCommand;
 use PHPStreamServer\Core\Console\Command;
+use PHPStreamServer\Core\Console\CommandContext;
+use PHPStreamServer\Core\Console\Options;
 use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
 use PHPStreamServer\Core\Server;
 
@@ -21,9 +23,9 @@ class ReloadCommand extends Command
         return 'Reload the server';
     }
 
-    public function execute(string $pidFile, string $socketFile): int
+    public function execute(CommandContext $context, Options $options): int
     {
-        $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
+        $bus = new ExternalProcessMessageBus($context->pidFile, $context->socketFile);
         $future = $bus->dispatch(new ReloadServerCommand());
         echo \sprintf("<color;fg=brand;options=bold>❯</> Reloading %s...\n", Server::NAME);
         $future->await();

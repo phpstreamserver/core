@@ -8,6 +8,8 @@ use PHPStreamServer\Core\Command\GetNetworkInfoCommand;
 use PHPStreamServer\Core\Command\GetProcessesCommand;
 use PHPStreamServer\Core\Command\GetWorkersCommand;
 use PHPStreamServer\Core\Console\Command;
+use PHPStreamServer\Core\Console\CommandContext;
+use PHPStreamServer\Core\Console\Options;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\MessageBus\ExternalProcessMessageBus;
 use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
@@ -29,9 +31,9 @@ class SupervisorCommand extends Command
         return 'List workers and processes';
     }
 
-    public function execute(string $pidFile, string $socketFile): int
+    public function execute(CommandContext $context, Options $options): int
     {
-        $bus = new ExternalProcessMessageBus($pidFile, $socketFile);
+        $bus = new ExternalProcessMessageBus($context->pidFile, $context->socketFile);
 
         $workers = $bus->dispatch(new GetWorkersCommand())->await();
         $processes = $bus->dispatch(new GetProcessesCommand())->await();

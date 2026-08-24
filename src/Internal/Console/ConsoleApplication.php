@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Internal\Console;
 
 use PHPStreamServer\Core\Console\Command;
+use PHPStreamServer\Core\Console\CommandContext;
 use PHPStreamServer\Core\Console\OptionDefinition;
 use PHPStreamServer\Core\Console\Options;
 use PHPStreamServer\Core\Console\StdoutHandler;
@@ -14,70 +15,57 @@ use PHPStreamServer\Core\Exception\ServerIsRunning;
 use PHPStreamServer\Core\MessageBus\MessageBusException;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Server;
-use PHPStreamServer\Core\Worker\WorkerFactory;
-use PHPStreamServer\Core\WorkerInterface;
-use Revolt\EventLoop;
 
 use function PHPStreamServer\Core\getStartFile;
 
 /**
  * @internal
  */
-final readonly class App
+final readonly class ConsoleApplication
 {
-    public function __construct(private string $pidFile, private string $socketFile)
-    {
-    }
+    /**
+     * @var list<string>
+     */
+    private array $argv;
 
     /**
-     * @param array<Plugin> $plugins
-     * @param array<WorkerInterface> $workers
-     * @param array<WorkerFactory> $workerFactories
-     * @psalm-suppress UndefinedVariable, PossiblyUndefinedVariable
+     * @param list<string> $argv
      */
-    public function run(array &$plugins, array &$workers, array &$workerFactories): int
+    public function run(CommandContext $context, array $argv): int
     {
-        $currentCommand = self::getCurrentCommand();
-        $options = self::getOptions();
-        $allRegisteredCommands = self::getAllRegisteredCommands($plugins);
-        $map = new \WeakMap();
-        $map[EventLoop::getDriver()] = [
-            'plugins' => $plugins,
-            'workers' => $workers,
-            'workerFactories' => $workerFactories,
-            'options' => $options,
-        ];
+        $this->argv = $argv;
+        $currentCommand = $this->getCurrentCommand();
+        $allRegisteredCommands = self::getAllRegisteredCommands($context->getPlugins());
+        $command = $currentCommand !== null ? ($allRegisteredCommands[$currentCommand] ?? null) : null;
 
-        // Free memory
-        $plugins = [];
-        $workers = [];
-        $workerFactories = [];
+        try {
+            $options = $this->getOptions($command);
+            $colors = !$options->hasOption('no-color');
+            $quiet = $options->hasOption('quiet');
+        } catch (\InvalidArgumentException $e) {
+            StdoutHandler::register('php://stdout', 'php://stderr');
+            echo \sprintf("<color;fg=red;options=bold>✗</> %s\n", $e->getMessage());
+            return 1;
+        }
 
-        StdoutHandler::register('php://stdout', 'php://stderr', !$options->hasOption('no-color'), $options->hasOption('quiet'));
+        StdoutHandler::register('php://stdout', 'php://stderr', $colors, $quiet);
 
         if ($options->hasOption('version')) {
             echo \sprintf("%s\n", Server::getVersion());
             return 0;
         }
 
-        foreach ($allRegisteredCommands as $command) {
-            if ($command::getName() !== $currentCommand) {
-                continue;
-            }
-
-            $command->map = $map;
-            $command->configure();
-
+        if ($command !== null) {
             if ($options->hasOption('help')) {
                 $this->showCommandHelp($command, $options->getOptionDefinitions());
                 return 0;
             }
 
             // Free memory
-            unset($currentCommand, $options, $allRegisteredCommands, $map);
+            unset($currentCommand, $allRegisteredCommands);
 
             try {
-                return $command->execute($this->pidFile, $this->socketFile);
+                return $command->execute($context, $options);
             } catch (ServerIsNotRunning) {
                 echo \sprintf("<color;fg=red;options=bold>✗</> %s is not running\n", Server::NAME);
                 return 1;
@@ -99,17 +87,23 @@ final readonly class App
         return 0;
     }
 
-    private static function getCurrentCommand(): string|null
+    private function getCurrentCommand(): string|null
     {
-        $command = $_SERVER['argv'][1] ?? null;
-        return $command !== null && !\str_starts_with($command, '-') ? $command : null;
+        for ($i = 1; $i < \count($this->argv); $i++) {
+            if (!\str_starts_with($this->argv[$i], '-')) {
+                return $this->argv[$i];
+            }
+        }
+
+        return null;
     }
 
-    private static function getOptions(): Options
+    private function getOptions(Command|null $command): Options
     {
         return new Options(
-            argv: $_SERVER['argv'] ?? [],
-            defaultOptionDefinitions: [
+            argv: $this->argv,
+            optionDefinitions: [
+                ...($command?->getOptionDefinitions() ?? []),
                 new OptionDefinition('help', 'h', 'Show command help'),
                 new OptionDefinition('quiet', 'q', 'Suppress all output'),
                 new OptionDefinition('no-color', null, 'Disable ANSI colors'),
@@ -138,12 +132,12 @@ final readonly class App
      * @param iterable<Command> $commands
      * @param array<OptionDefinition> $options
      */
-    private static function showApplicationHelp(iterable $commands, array $options): void
+    private function showApplicationHelp(iterable $commands, array $options): void
     {
         echo \sprintf("<color;fg=brand;options=bold>🌸 %s</>  <color;options=dim>%s</>\n", Server::NAME, Server::getVersion());
         echo "  PHP application server and process manager\n";
         echo "<color;fg=brand;options=bold>Usage</>\n";
-        echo \sprintf("  <color;fg=token>%s</> <command> [options]\n", self::getInvocation());
+        echo \sprintf("  <color;fg=token>%s</> <command> [options]\n", $this->getInvocation());
         echo "<color;fg=brand;options=bold>Commands</>\n";
         echo (new Table(indent: 1))->addRows(self::createCommandsTableRows($commands));
         echo "<color;fg=brand;options=bold>Global options</>\n";
@@ -153,21 +147,21 @@ final readonly class App
     /**
      * @param iterable<OptionDefinition> $options
      */
-    private static function showCommandHelp(Command $command, iterable $options): void
+    private function showCommandHelp(Command $command, iterable $options): void
     {
         echo \sprintf("<color;fg=brand;options=bold>🌸 %s</>  <color;options=dim>%s</>\n", Server::NAME, Server::getVersion());
         echo "  PHP application server and process manager\n";
         echo "<color;fg=brand;options=bold>Description</>\n";
         echo \sprintf("  %s\n", $command::getDescription());
         echo "<color;fg=brand;options=bold>Usage</>\n";
-        echo \sprintf("  <color;fg=token>%s %s</> [options]\n", self::getInvocation(), $command::getName());
+        echo \sprintf("  <color;fg=token>%s %s</> [options]\n", $this->getInvocation(), $command::getName());
         echo "<color;fg=brand;options=bold>Options</>\n";
         echo (new Table(indent: 1))->addRows(self::createOptionsTableRows($options));
     }
 
-    private static function getInvocation(): string
+    private function getInvocation(): string
     {
-        $startFile = $_SERVER['argv'][0] ?? getStartFile();
+        $startFile = $this->argv[0] ?? getStartFile();
         if (\preg_match('~^[a-zA-Z0-9_./-]+$~D', $startFile) !== 1) {
             $startFile = \escapeshellarg($startFile);
         }
@@ -195,7 +189,12 @@ final readonly class App
     {
         foreach ($options as $option) {
             yield [
-                \sprintf('<color;fg=token>%s--%s</>', $option->shortName !== null ? '-' . $option->shortName . ', ' : '    ', $option->name),
+                \sprintf(
+                    '<color;fg=token>%s--%s%s</>',
+                    $option->shortName !== null ? \sprintf('-%s, ', $option->shortName) : '    ',
+                    $option->name,
+                    $option->requiresValue ? '=VALUE' : '',
+                ),
                 $option->description,
             ];
         }

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\ConsoleCommand;
 
 use PHPStreamServer\Core\Console\Command;
+use PHPStreamServer\Core\Console\CommandContext;
+use PHPStreamServer\Core\Console\OptionDefinition;
+use PHPStreamServer\Core\Console\Options;
 use PHPStreamServer\Core\Console\Table;
 use PHPStreamServer\Core\Exception\ServerIsRunning;
 use PHPStreamServer\Core\Internal\MasterProcess;
@@ -27,33 +30,31 @@ class StartCommand extends Command
         return 'Start the server';
     }
 
-    public function configure(): void
+    public function getOptionDefinitions(): array
     {
-        $this->addOptionDefinition('daemon', 'd', 'Run in daemon mode');
+        return [
+            new OptionDefinition('daemon', 'd', 'Run in daemon mode'),
+        ];
     }
 
-    public function execute(string $pidFile, string $socketFile): int
+    public function execute(CommandContext $context, Options $options): int
     {
-        if (isRunning($pidFile)) {
+        if (isRunning($context->pidFile)) {
             throw new ServerIsRunning();
         }
 
-        $daemonize = (bool) $this->getOption('daemon');
+        $daemonize = (bool) $options->getOption('daemon');
+        $runtimeState = $context->takeRuntimeState();
+        $workers = $runtimeState['workers'];
 
         $masterProcess = new MasterProcess(
-            pidFile: $pidFile,
-            socketFile: $socketFile,
-            plugins: $this->getPlugins(),
-            workers: $this->getWorkers(),
-            workerFactories: $this->getWorkerFactories(),
+            pidFile: $context->pidFile,
+            socketFile: $context->socketFile,
+            plugins: $runtimeState['plugins'],
+            workers: $runtimeState['workers'],
+            workerFactories: $runtimeState['workerFactories'],
         );
-
-        /**
-         * @var array<SupervisedWorker> $workers
-         * @psalm-suppress UndefinedThisPropertyFetch, PossiblyNullFunctionCall
-         */
-        $workers = (fn(): array => $this->workers)->bindTo($masterProcess, $masterProcess)();
-        $eventLoop = getDriverName();
+        unset($runtimeState);
 
         echo \sprintf("<color;fg=brand;options=bold>❯ 🌸 %s</>\n", Server::NAME);
 
@@ -61,7 +62,7 @@ class StartCommand extends Command
             ->addRows([
                 ['Version:', Server::getVersion()],
                 ['PHP:', PHP_VERSION],
-                ['Event loop:', $eventLoop],
+                ['Event loop:', getDriverName()],
             ])
         ;
 
@@ -92,6 +93,8 @@ class StartCommand extends Command
         if (!$daemonize) {
             echo "Press Ctrl+C to stop.\n";
         }
+
+        unset($workers);
 
         $exitCode = $masterProcess->run($daemonize);
 
