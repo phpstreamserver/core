@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Runtime;
+namespace PHPStreamServer\Core\Internal;
 
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
@@ -10,6 +10,9 @@ use Psr\Log\NullLogger;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Driver\StreamSelectDriver;
 
+/**
+ * @internal
+ */
 final class ErrorHandler
 {
     private const ERROR_LEVEL = [

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core;
 
+use PHPStreamServer\Core\Internal\ProcessIdentity;
 use Revolt\EventLoop\DriverFactory;
 
 function getStartFile(): string
@@ -175,4 +176,14 @@ function strSignal(int $signal): string
         31 => 'SIGSYS',
         default => 'UNKNOWN',
     };
+}
+
+function getEffectiveUser(): string
+{
+    return ProcessIdentity::getEffectiveUser();
+}
+
+function getEffectiveGroup(): string
+{
+    return ProcessIdentity::getEffectiveGroup();
 }

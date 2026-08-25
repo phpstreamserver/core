@@ -9,7 +9,6 @@ use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Event\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\Event\ProcessSpawnedEvent;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
-use PHPStreamServer\Core\Exception\ProcessIdentityException;
 use PHPStreamServer\Core\Internal\MessageBus\GracefulMessageBusInterface;
 use PHPStreamServer\Core\Internal\Status;
 use PHPStreamServer\Core\LoggerInterface;
@@ -19,14 +18,12 @@ use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Plugin\Supervisor\Internal\ReloadStrategyStack;
 use PHPStreamServer\Core\Plugin\Supervisor\SupervisorPlugin;
 use PHPStreamServer\Core\ReloadStrategy\ReloadStrategy;
-use PHPStreamServer\Core\Runtime\ErrorHandler;
-use PHPStreamServer\Core\Runtime\ProcessIdentity;
-use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\WorkerInterface;
 use Revolt\EventLoop;
-use Revolt\EventLoop\DriverFactory;
 
 use function PHPStreamServer\Core\generateWorkerId;
+use function PHPStreamServer\Core\getEffectiveGroup;
+use function PHPStreamServer\Core\getEffectiveUser;
 
 /**
  * Runs long-lived PHP code in supervised worker processes
@@ -74,8 +71,8 @@ class SupervisedWorker implements WorkerInterface
         string|null $name = null,
         public readonly int $count = 1,
         public readonly bool $reloadable = true,
-        private string|null $user = null,
-        private string|null $group = null,
+        private readonly string|null $user = null,
+        private readonly string|null $group = null,
         \Closure|null $onStart = null,
         \Closure|null $onStop = null,
         \Closure|null $onReload = null,
@@ -111,29 +108,12 @@ class SupervisedWorker implements WorkerInterface
      */
     final public function run(ContainerInterface $workerContainer): int
     {
-        // Some command-line SAPIs (e.g., phpdbg) do not provide this function
-        if (\function_exists('cli_set_process_title')) {
-            \cli_set_process_title(\sprintf('%s: %s', Server::NAME, $this->getName()));
-        }
-
-        EventLoop::setDriver((new DriverFactory())->create());
-
         $this->status = Status::STARTING;
         $this->pid = \posix_getpid();
         $this->container = $workerContainer;
         $this->logger = $workerContainer->getService(LoggerInterface::class);
         /** @var GracefulMessageBusInterface */
         $this->bus = $workerContainer->getService(MessageBusInterface::class);
-
-        try {
-            ProcessIdentity::switchTo($this->user, $this->group);
-        } catch (ProcessIdentityException $e) {
-            $this->logger->error(\sprintf('Worker "%s" failed to change process identity: %s', $this->getName(), $e->getMessage()));
-            $this->onStartCallbacks = [];
-            $this->onStopCallbacks = [];
-            $this->onReloadCallbacks = [];
-            $this->stop(1);
-        }
 
         $reloadStrategyStack = new ReloadStrategyStack($this->reload(...), $this->reloadStrategies);
         $this->reloadStrategyStack = $reloadStrategyStack;
@@ -142,9 +122,9 @@ class SupervisedWorker implements WorkerInterface
         $this->startingFuture = new DeferredFuture();
         $this->container->setService('reload_strategy_emitter', $this->reloadStrategyStack->emitEvent(...));
 
-        ErrorHandler::register($this->logger);
-        EventLoop::setErrorHandler(static function (\Throwable $exception) use ($reloadStrategyStack): void {
-            ErrorHandler::handleException($exception);
+        $defaultHandler = EventLoop::getErrorHandler();
+        EventLoop::setErrorHandler(static function (\Throwable $exception) use ($defaultHandler, $reloadStrategyStack): void {
+            $defaultHandler?->__invoke($exception);
             $reloadStrategyStack->emitEvent($exception);
         });
 
@@ -222,12 +202,12 @@ class SupervisedWorker implements WorkerInterface
 
     final public function getUser(): string
     {
-        return $this->user ?? ProcessIdentity::getEffectiveUser();
+        return $this->user ?? getEffectiveUser();
     }
 
     final public function getGroup(): string
     {
-        return $this->group ?? ProcessIdentity::getEffectiveGroup();
+        return $this->group ?? getEffectiveGroup();
     }
 
     public function getContainer(): ContainerInterface

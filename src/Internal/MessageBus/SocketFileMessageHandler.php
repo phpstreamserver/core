@@ -13,6 +13,7 @@ use Amp\Socket\ResourceServerSocketFactory;
 use Amp\Socket\UnixAddress;
 use Amp\TimeoutCancellation;
 use PHPStreamServer\Core\Internal\PeerCredentials;
+use PHPStreamServer\Core\Internal\ProcessIdentity;
 use PHPStreamServer\Core\MessageBus\AllowedClassesProviderInterface;
 use PHPStreamServer\Core\MessageBus\AuthorizedSources;
 use PHPStreamServer\Core\MessageBus\CompositeMessage;
@@ -23,7 +24,6 @@ use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\MessageBus\MessageInterface;
 use PHPStreamServer\Core\MessageBus\MessageSource;
 use PHPStreamServer\Core\Runtime\ChildProcessRegistry;
-use PHPStreamServer\Core\Runtime\ProcessIdentity;
 use Revolt\EventLoop;
 
 use function Amp\async;

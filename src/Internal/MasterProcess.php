@@ -19,7 +19,6 @@ use PHPStreamServer\Core\MessageBus\MessageBusInterface;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Plugin;
 use PHPStreamServer\Core\Runtime\ChildProcessRegistry;
-use PHPStreamServer\Core\Runtime\ErrorHandler;
 use PHPStreamServer\Core\Runtime\SIGCHLDHandler;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\Worker\WorkerFactory;
@@ -146,7 +145,8 @@ final class MasterProcess
         // Child process context
         if ($ret instanceof WorkerInterface) {
             $this->free();
-            exit($ret->run($this->workerContainer));
+            $runner = new WorkerProcessRunner($this->workerContainer);
+            exit($runner->run($ret));
         }
 
         // Master process shutdown
