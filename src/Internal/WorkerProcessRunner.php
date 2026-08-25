@@ -17,8 +17,10 @@ use Revolt\EventLoop\DriverFactory;
  */
 final readonly class WorkerProcessRunner
 {
-    public function __construct(private ContainerInterface $workerContainer)
-    {
+    public function __construct(
+        private ContainerInterface $workerContainer,
+        private int $masterPid,
+    ) {
     }
 
     public function run(WorkerInterface $worker): int
@@ -44,6 +46,12 @@ final readonly class WorkerProcessRunner
             EventLoop::run();
 
             return 1;
+        }
+
+        try {
+            ParentDeathSignal::set(SIGTERM, $this->masterPid);
+        } catch (\Throwable $e) {
+            $logger->warning(\sprintf('Worker "%s": %s', $worker->getName(), $e->getMessage()), ['exception' => $e]);
         }
 
         return $worker->run($this->workerContainer);

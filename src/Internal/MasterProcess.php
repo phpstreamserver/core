@@ -45,6 +45,7 @@ final class MasterProcess
     private static bool $registered = false;
     private Suspension $suspension;
     private Status $status = Status::SHUTDOWN;
+    private int $masterPid;
     private MessageHandlerInterface $messageHandler;
     private LoggerInterface $logger;
     private ContainerInterface $masterContainer;
@@ -145,7 +146,7 @@ final class MasterProcess
         // Child process context
         if ($ret instanceof WorkerInterface) {
             $this->free();
-            $runner = new WorkerProcessRunner($this->workerContainer);
+            $runner = new WorkerProcessRunner($this->workerContainer, $this->masterPid);
             exit($runner->run($ret));
         }
 
@@ -250,6 +251,7 @@ final class MasterProcess
         }
 
         $this->status = Status::STARTING;
+        $this->masterPid = \posix_getpid();
         $this->saveMasterPid();
 
         $this->logger = &$this->masterContainer->getService(LoggerInterface::class);
@@ -259,7 +261,7 @@ final class MasterProcess
         $this->masterContainer->setService('worker_factory_id_resolver', $this->workerFactoryManager->getFactoryIdByWorkerId(...));
         unset($this->workerFactories);
 
-        $this->masterContainer->setParameter('pid', \posix_getpid());
+        $this->masterContainer->setParameter('pid', $this->masterPid);
 
         $stopCallback = fn(): null => $this->stop();
         $reloadCallback = fn(): null => $this->reload();
@@ -417,7 +419,7 @@ final class MasterProcess
             \unlink($this->socketFile);
         }
 
-        if (false === \file_put_contents($this->pidFile, (string) \posix_getpid())) {
+        if (false === \file_put_contents($this->pidFile, (string) $this->masterPid)) {
             throw new PHPStreamServerException(\sprintf('Cannot save PID to %s', $this->pidFile));
         }
 
