@@ -14,7 +14,7 @@ use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;
  *
  * @implements MessageInterface<array<WorkerInfo>>
  */
-#[AuthorizedSources(MessageSource::MASTER, MessageSource::MANAGER)]
+#[AuthorizedSources(MessageSource::MASTER, MessageSource::CHILD, MessageSource::MANAGER)]
 final class GetWorkersCommand implements MessageInterface
 {
 }

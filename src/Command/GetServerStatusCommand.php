@@ -14,7 +14,7 @@ use PHPStreamServer\Core\Plugin\System\ServerStatus;
  *
  * @implements MessageInterface<ServerStatus>
  */
-#[AuthorizedSources(MessageSource::MASTER, MessageSource::MANAGER)]
+#[AuthorizedSources(MessageSource::MASTER, MessageSource::CHILD, MessageSource::MANAGER)]
 final class GetServerStatusCommand implements MessageInterface
 {
 }

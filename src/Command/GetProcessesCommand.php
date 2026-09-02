@@ -14,7 +14,7 @@ use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
  *
  * @implements MessageInterface<array<ProcessInfo>>
  */
-#[AuthorizedSources(MessageSource::MASTER, MessageSource::MANAGER)]
+#[AuthorizedSources(MessageSource::MASTER, MessageSource::CHILD, MessageSource::MANAGER)]
 final class GetProcessesCommand implements MessageInterface
 {
 }

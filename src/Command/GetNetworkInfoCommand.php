@@ -14,7 +14,7 @@ use PHPStreamServer\Core\Plugin\System\ProcessNetworkInfo;
  *
  * @implements MessageInterface<array<ProcessNetworkInfo>>
  */
-#[AuthorizedSources(MessageSource::MASTER, MessageSource::MANAGER)]
+#[AuthorizedSources(MessageSource::MASTER, MessageSource::CHILD, MessageSource::MANAGER)]
 final class GetNetworkInfoCommand implements MessageInterface
 {
 }
