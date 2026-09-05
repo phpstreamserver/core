@@ -122,16 +122,46 @@ function getDriverName(): string
     return (new \ReflectionObject((new DriverFactory())->create()))->getShortName();
 }
 
+/**
+ * @psalm-suppress ForbiddenCode, RedundantCondition
+ */
 function getCpuCount(): int
 {
-    if (\PHP_VERSION_ID >= 80300) {
-        return \posix_sysconf(\POSIX_SC_NPROCESSORS_ONLN);
-    } elseif (\DIRECTORY_SEPARATOR === '/' && \function_exists('shell_exec')) {
-        /** @psalm-suppress ForbiddenCode */
-        return \strtolower(\PHP_OS) === 'darwin' ? (int) \shell_exec('sysctl -n machdep.cpu.core_count') : (int) \shell_exec('nproc');
-    } else {
-        return 1;
+    static $cpuCount = 0;
+
+    if ($cpuCount > 0) {
+        return $cpuCount;
     }
+
+    if ($cpuCount <= 0 && \PHP_VERSION_ID >= 80400 && \function_exists('pcntl_getcpuaffinity')) {
+        $cpuCount = \count(\pcntl_getcpuaffinity() ?: []);
+    }
+
+    if ($cpuCount <= 0 && (\PHP_OS === 'Linux' || \PHP_OS === 'FreeBSD')) {
+        $cpuCount = (int) \shell_exec('nproc 2>/dev/null');
+    }
+
+    if ($cpuCount <= 0 && \PHP_VERSION_ID >= 80300) {
+        $cpuCount = \posix_sysconf(\POSIX_SC_NPROCESSORS_ONLN);
+    }
+
+    if ($cpuCount <= 0 && \PHP_OS === 'Darwin') {
+        $cpuCount = (int) \shell_exec('sysctl -n hw.logicalcpu 2>/dev/null');
+    }
+
+    if ($cpuCount <= 0 && \PHP_OS === 'FreeBSD') {
+        $cpuCount = (int) \shell_exec('sysctl -n hw.ncpu 2>/dev/null');
+    }
+
+    if ($cpuCount <= 0 && (\PHP_OS === 'OpenBSD' || \PHP_OS === 'NetBSD')) {
+        $cpuCount = (int) \shell_exec('sysctl -n hw.ncpuonline 2>/dev/null');
+    }
+
+    if ($cpuCount <= 0) {
+        $cpuCount = 1;
+    }
+
+    return $cpuCount;
 }
 
 function generateWorkerId(): int
