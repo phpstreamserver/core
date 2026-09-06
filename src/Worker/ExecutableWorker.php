@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core\Worker;
 
 use PHPStreamServer\Core\Event\ProcessReplacedEvent;
+use PHPStreamServer\Core\Internal\CloseOnExec\CloseOnExec;
 
 use function PHPStreamServer\Core\getAbsoluteBinaryPath;
 
@@ -87,6 +88,7 @@ final class ExecutableWorker extends SupervisedWorker
     private static function exec(string $path, array $args): never
     {
         $envVars = [...\getenv(), ...$_ENV];
+        CloseOnExec::set();
         \pcntl_exec($path, $args, $envVars);
 
         exit(1);
