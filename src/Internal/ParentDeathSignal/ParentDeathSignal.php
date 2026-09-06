@@ -2,10 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PHPStreamServer\Core\Internal;
-
-use PHPStreamServer\Core\Internal\FFIBindings\FreeBSDParentDeathSignal;
-use PHPStreamServer\Core\Internal\FFIBindings\LinuxParentDeathSignal;
+namespace PHPStreamServer\Core\Internal\ParentDeathSignal;
 
 /**
  * @internal

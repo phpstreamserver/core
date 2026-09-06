@@ -6,6 +6,7 @@ namespace PHPStreamServer\Core\Internal;
 
 use PHPStreamServer\Core\ContainerInterface;
 use PHPStreamServer\Core\Exception\ProcessIdentityException;
+use PHPStreamServer\Core\Internal\ParentDeathSignal\ParentDeathSignal;
 use PHPStreamServer\Core\LoggerInterface;
 use PHPStreamServer\Core\Server;
 use PHPStreamServer\Core\WorkerInterface;
