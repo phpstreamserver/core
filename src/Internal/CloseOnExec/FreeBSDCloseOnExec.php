@@ -16,6 +16,10 @@ final class FreeBSDCloseOnExec
         int *__error(void);
     CDEF;
 
+    private function __construct()
+    {
+    }
+
     public static function set(): void
     {
         if (\PHP_OS !== 'FreeBSD') {

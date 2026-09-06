@@ -24,6 +24,10 @@ final class LinuxCloseOnExec
         int *__errno_location(void);
     CDEF;
 
+    private function __construct()
+    {
+    }
+
     public static function set(): void
     {
         if (\PHP_OS_FAMILY !== 'Linux') {

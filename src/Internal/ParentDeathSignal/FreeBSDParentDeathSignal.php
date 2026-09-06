@@ -22,6 +22,10 @@ final class FreeBSDParentDeathSignal
         int *__error(void);
     CDEF;
 
+    private function __construct()
+    {
+    }
+
     public static function set(int $signal): void
     {
         if (\PHP_OS !== 'FreeBSD') {

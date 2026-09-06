@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core\Internal\CloseOnExec;
 
+/**
+ * @internal
+ */
 final readonly class CloseOnExec
 {
     private function __construct()

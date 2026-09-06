@@ -21,6 +21,10 @@ final class OpenBSDCloseOnExec
         int *__errno(void);
     CDEF;
 
+    private function __construct()
+    {
+    }
+
     public static function set(): void
     {
         if (\PHP_OS !== 'OpenBSD') {

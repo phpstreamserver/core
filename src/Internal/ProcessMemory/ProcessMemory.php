@@ -6,6 +6,9 @@ namespace PHPStreamServer\Core\Internal\ProcessMemory;
 
 use PHPStreamServer\Core\Internal\FFIBindings\OpenBSDProcessMemory;
 
+/**
+ * @internal
+ */
 final readonly class ProcessMemory
 {
     private function __construct()
