@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core;
 
 use PHPStreamServer\Core\Internal\ProcessIdentity;
+use PHPStreamServer\Core\Internal\ProcessMemory\ProcessMemory;
 use Revolt\EventLoop\DriverFactory;
 
 function getStartFile(): string
@@ -103,18 +104,7 @@ function getAbsoluteBinaryPath(string $binary): string
 
 function getMemoryUsageByPid(int $pid): int
 {
-    if (PHP_VERSION_ID >= 80300 && \is_file("/proc/$pid/statm")) {
-        $pagesize = \posix_sysconf(POSIX_SC_PAGESIZE);
-        $statm = \trim(\file_get_contents("/proc/$pid/statm"));
-        $statm = \explode(' ', $statm);
-        $vmrss = (int) ($statm[1] ?? 0) * $pagesize;
-    } else {
-        /** @psalm-suppress ForbiddenCode */
-        $out = \shell_exec("ps -o rss= -p $pid 2>/dev/null");
-        $vmrss = ((int) \trim((string) $out)) * 1024;
-    }
-
-    return $vmrss;
+    return ProcessMemory::get($pid);
 }
 
 function getDriverName(): string
