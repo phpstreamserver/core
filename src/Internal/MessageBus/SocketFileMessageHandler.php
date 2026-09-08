@@ -60,6 +60,7 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
 
     private array $allowedClasses = self::DEFAULT_ALLOWED_CLASSES;
     private string $recomputeClassesCallbackId = '';
+    private Context|null $masterContext = null;
 
     public function __construct(string $socketFile, ChildProcessRegistry $childProcessRegistry)
     {
@@ -200,17 +201,22 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
      */
     public function dispatch(MessageInterface $message): Future
     {
-        $pid = \posix_getpid();
-        $uid = \posix_geteuid();
-        $gid = \posix_getegid();
-        $context = new Context(
-            source: MessageSource::MASTER,
-            pid: $pid,
-            uid: $uid,
-            gid: $gid,
-            user: ProcessIdentity::getUserBuUid($uid),
-            group: ProcessIdentity::getGroupBuGid($gid),
-        );
+        if ($this->masterContext === null) {
+            $pid = \posix_getpid();
+            $uid = \posix_geteuid();
+            $gid = \posix_getegid();
+
+            $this->masterContext = new Context(
+                source: MessageSource::MASTER,
+                pid: $pid,
+                uid: $uid,
+                gid: $gid,
+                user: ProcessIdentity::getUserBuUid($uid),
+                group: ProcessIdentity::getGroupBuGid($gid),
+            );
+        }
+
+        $context = $this->masterContext;
 
         return async(function () use ($message, $context): mixed {
             $response = $this->dispatchWithContext($message, $context)->await();
