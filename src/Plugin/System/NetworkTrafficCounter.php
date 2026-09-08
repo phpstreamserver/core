@@ -75,7 +75,11 @@ final class NetworkTrafficCounter
     public function removeConnection(Socket $socket): void
     {
         $connectionId = $this->getConnectionId($socket);
-        $this->closedConnectionIds[] = $connectionId;
+        if (isset($this->createdConnections[$connectionId])) {
+            unset($this->createdConnections[$connectionId]);
+        } else {
+            $this->closedConnectionIds[] = $connectionId;
+        }
         $this->connectionIds->offsetUnset($socket);
     }
 
