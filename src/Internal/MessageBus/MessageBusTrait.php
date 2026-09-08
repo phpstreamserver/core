@@ -42,12 +42,15 @@ trait MessageBusTrait
      */
     private static function readFrame(Socket $socket, Cancellation|null $firstByteCancellation = null): string|null
     {
-        $firstByte = $socket->read(limit: 1, cancellation: $firstByteCancellation);
-        if ($firstByte === null) {
+        $header = $socket->read(limit: 6, cancellation: $firstByteCancellation);
+        if ($header === null) {
             return null;
         }
 
-        $header = $firstByte . self::readExactly($socket, 5, new TimeoutCancellation(self::PROTOCOL_READ_TIMEOUT, 'Message header timed out'));
+        if (\strlen($header) < 6) {
+            $header .= self::readExactly($socket, 6 - \strlen($header), new TimeoutCancellation(self::PROTOCOL_READ_TIMEOUT, 'Message header timed out'));
+        }
+
         ['size' => $size, 'gzip' => $compressed] = \unpack('Vsize/vgzip', $header);
 
         if ($size < 1 || $size > self::MAX_PAYLOAD_SIZE || ($compressed !== 0 && $compressed !== 1)) {
