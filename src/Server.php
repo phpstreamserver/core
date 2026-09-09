@@ -90,6 +90,7 @@ final class Server
 
     public static function getProductName(): string
     {
-        return \sprintf('%s/%s', \strtolower(self::NAME), self::getVersion());
+        static $productName;
+        return $productName ??= \sprintf('%s/%s', \strtolower(self::NAME), self::getVersion());
     }
 }
