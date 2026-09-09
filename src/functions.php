@@ -117,7 +117,7 @@ function getCpuCount(): int
         $cpuCount = \count(\pcntl_getcpuaffinity() ?: []);
     }
 
-    if ($cpuCount <= 0 && (\PHP_OS === 'Linux' || \PHP_OS === 'FreeBSD')) {
+    if ($cpuCount <= 0 && \function_exists('shell_exec') && (\PHP_OS === 'Linux' || \PHP_OS === 'FreeBSD')) {
         $cpuCount = (int) \shell_exec('nproc 2>/dev/null');
     }
 
@@ -125,15 +125,15 @@ function getCpuCount(): int
         $cpuCount = \posix_sysconf(\POSIX_SC_NPROCESSORS_ONLN);
     }
 
-    if ($cpuCount <= 0 && \PHP_OS === 'Darwin') {
+    if ($cpuCount <= 0 && \function_exists('shell_exec') && \PHP_OS === 'Darwin') {
         $cpuCount = (int) \shell_exec('sysctl -n hw.logicalcpu 2>/dev/null');
     }
 
-    if ($cpuCount <= 0 && \PHP_OS === 'FreeBSD') {
+    if ($cpuCount <= 0 && \function_exists('shell_exec') && \PHP_OS === 'FreeBSD') {
         $cpuCount = (int) \shell_exec('sysctl -n hw.ncpu 2>/dev/null');
     }
 
-    if ($cpuCount <= 0 && (\PHP_OS === 'OpenBSD' || \PHP_OS === 'NetBSD')) {
+    if ($cpuCount <= 0 && \function_exists('shell_exec') && (\PHP_OS === 'OpenBSD' || \PHP_OS === 'NetBSD')) {
         $cpuCount = (int) \shell_exec('sysctl -n hw.ncpuonline 2>/dev/null');
     }
 
