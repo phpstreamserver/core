@@ -56,7 +56,7 @@ final class ConsoleLogger implements LoggerInterface
         $level = (string) $level;
         $message = (string) $message;
         $context = $this->contextNormalizer->normalize($context);
-        $context = $context === [] ? '' : \json_encode($this->contextNormalizer->normalize($context), self::DEFAULT_JSON_FLAGS);
+        $context = $context === [] ? '' : \json_encode($context, self::DEFAULT_JSON_FLAGS);
         $errorLevel = self::LEVEL_MAP[\strtolower($level)] ?? $level;
 
         $message = \rtrim(\sprintf(
