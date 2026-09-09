@@ -92,16 +92,6 @@ function getDefaultSocketFile(): string
     return \sprintf('%s/%s-%s.socket', getRunDirectory(), Server::SHORTNAME, \hash('xxh32', getStartFile()));
 }
 
-function getAbsoluteBinaryPath(string $binary): string
-{
-    /** @psalm-suppress ForbiddenCode */
-    if (!\str_starts_with($binary, '/') && \is_string($absoluteBinaryPath = \shell_exec("command -v $binary"))) {
-        $binary = \trim($absoluteBinaryPath);
-    }
-
-    return $binary;
-}
-
 function getMemoryUsageByPid(int $pid): int
 {
     return ProcessMemory::get($pid);

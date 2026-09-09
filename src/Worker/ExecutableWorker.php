@@ -7,8 +7,6 @@ namespace PHPStreamServer\Core\Worker;
 use PHPStreamServer\Core\Event\ProcessReplacedEvent;
 use PHPStreamServer\Core\Internal\CloseOnExec\CloseOnExec;
 
-use function PHPStreamServer\Core\getAbsoluteBinaryPath;
-
 /**
  * Runs an external command in supervised worker processes by replacing process with the executable
  */
@@ -51,8 +49,8 @@ final class ExecutableWorker extends SupervisedWorker
             return;
         }
 
-        [$absolutePath, $args] = self::convertCommandToPcntl($worker->command);
-        \register_shutdown_function(self::exec(...), $absolutePath, $args);
+        [$binaryPath, $args] = self::convertCommandToPcntl($worker->command);
+        \register_shutdown_function(self::exec(...), $binaryPath, $args);
 
         \set_error_handler(static function (int $code) use ($worker): true {
             $worker->logger->critical('External process call error: ' . \posix_strerror($code), ['command' => $worker->command]);
@@ -75,7 +73,31 @@ final class ExecutableWorker extends SupervisedWorker
         $binary = \array_shift($parts);
         $args = $parts;
 
-        return [getAbsoluteBinaryPath($binary), $args];
+        return [self::findBinaryPath($binary), $args];
+    }
+
+    private static function findBinaryPath(string $binary): string
+    {
+        if (\str_contains($binary, '/')) {
+            return $binary;
+        }
+
+        $path = \getenv('PATH');
+        $dirs = \is_string($path) ? \explode(\PATH_SEPARATOR, $path) : [];
+
+        foreach ($dirs as $dir) {
+            if ($dir === '') {
+                $dir = '.';
+            }
+
+            $file = \rtrim($dir, '/') . '/' . $binary;
+
+            if (\is_file($file) && \is_executable($file)) {
+                return $file;
+            }
+        }
+
+        return $binary;
     }
 
     /**
