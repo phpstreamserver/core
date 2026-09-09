@@ -8,13 +8,12 @@ use PHPStreamServer\Core\Event\ProcessBlockedEvent;
 use PHPStreamServer\Core\Event\ProcessHeartbeatEvent;
 use PHPStreamServer\Core\Event\ProcessReplacedEvent;
 use PHPStreamServer\Core\Exception\PHPStreamServerException;
+use PHPStreamServer\Core\Internal\ProcessMemory\ProcessMemory;
 use PHPStreamServer\Core\MessageBus\MessageHandlerInterface;
 use PHPStreamServer\Core\Plugin\Supervisor\ProcessInfo;
 use PHPStreamServer\Core\Plugin\Supervisor\WorkerInfo;
 use PHPStreamServer\Core\Worker\SupervisedWorker;
 use Revolt\EventLoop;
-
-use function PHPStreamServer\Core\getMemoryUsageByPid;
 
 /**
  * @internal
@@ -83,7 +82,7 @@ final class WorkerPool
             $pid = $message->pid;
             $checkMemoryUsageClosure = static function (string $id) use (&$processInfosByPid, $pid): void {
                 if (\array_key_exists($pid, $processInfosByPid)) {
-                    $processInfosByPid[$pid]->memory = getMemoryUsageByPid($pid);
+                    $processInfosByPid[$pid]->memory = ProcessMemory::get($pid);
                 } else {
                     EventLoop::cancel($id);
                 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace PHPStreamServer\Core;
 
 use PHPStreamServer\Core\Internal\ProcessIdentity;
-use PHPStreamServer\Core\Internal\ProcessMemory\ProcessMemory;
 use Revolt\EventLoop\DriverFactory;
 
 function getStartFile(): string
@@ -90,11 +89,6 @@ function getDefaultPidFile(): string
 function getDefaultSocketFile(): string
 {
     return \sprintf('%s/%s-%s.socket', getRunDirectory(), Server::SHORTNAME, \hash('xxh32', getStartFile()));
-}
-
-function getMemoryUsageByPid(int $pid): int
-{
-    return ProcessMemory::get($pid);
 }
 
 function getDriverName(): string
