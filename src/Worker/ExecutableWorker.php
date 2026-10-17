@@ -68,8 +68,8 @@ final class ExecutableWorker extends SupervisedWorker
      */
     private static function convertCommandToPcntl(string $command): array
     {
-        \preg_match_all('/\'[^\']*\'|"[^"]*"|\S+/', $command, $matches);
-        $parts = \array_map(static fn(string $part): string => \trim($part, '"\''), $matches[0]);
+        \preg_match_all('/(?:\'[^\']*\'|"[^"]*"|[^\s\'"]+|[\'"])+/', $command, $matches);
+        $parts = \array_map(static fn(string $part): string => \preg_replace('/\'([^\']*)\'|"([^"]*)"/', '$1$2', $part), $matches[0]);
         $binary = \array_shift($parts);
         $args = $parts;
 
