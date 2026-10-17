@@ -101,7 +101,11 @@ final class Container implements ContainerInterface
      */
     public function getParameter(string $id): array|bool|string|int|float|null
     {
-        return $this->parameters[$id] ?? throw new ParameterNotFoundException($id);
+        if (!\array_key_exists($id, $this->parameters)) {
+            throw new ParameterNotFoundException($id);
+        }
+
+        return $this->parameters[$id];
     }
 
     public function hasParameter(string $id): bool
