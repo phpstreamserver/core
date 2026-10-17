@@ -105,8 +105,9 @@ final class Supervisor
             unset($this->restartCallbackIds[$workerId]);
         }
 
-        $this->stopWorker($workerInfo)->await();
+        $future = $this->stopWorker($workerInfo);
         $this->pool->removeWorker($workerId);
+        $future->await();
     }
 
     public function stop(): Future
