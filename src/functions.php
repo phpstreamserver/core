@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace PHPStreamServer\Core;
 
+use Amp\ByteStream\ReadableIterableStream;
+use Amp\ByteStream\ReadableStream;
+use PHPStreamServer\Core\Internal\CallbackOutputIterator;
 use PHPStreamServer\Core\Internal\ProcessIdentity;
 use Revolt\EventLoop\DriverFactory;
 
@@ -176,4 +179,9 @@ function getEffectiveUser(): string
 function getEffectiveGroup(): string
 {
     return ProcessIdentity::getEffectiveGroup();
+}
+
+function streamOutput(\Closure $callback): ReadableStream
+{
+    return new ReadableIterableStream(new CallbackOutputIterator($callback));
 }
