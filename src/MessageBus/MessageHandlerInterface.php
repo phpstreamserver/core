@@ -10,6 +10,7 @@ interface MessageHandlerInterface
      * @template T of MessageInterface
      * @param class-string<T> $class
      * @param \Closure(T, Context): mixed $closure
+     * @throws \InvalidArgumentException
      */
     public function subscribe(string $class, \Closure $closure): void;
 
@@ -17,6 +18,7 @@ interface MessageHandlerInterface
      * @template T of MessageInterface
      * @param class-string<T> $class
      * @param \Closure(T, Context): mixed $closure
+     * @throws \InvalidArgumentException
      */
     public function unsubscribe(string $class, \Closure $closure): void;
 }

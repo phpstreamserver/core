@@ -175,6 +175,14 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
      */
     public function subscribe(string $class, \Closure $closure): void
     {
+        if (!\is_subclass_of($class, MessageInterface::class)) {
+            throw new \InvalidArgumentException(\sprintf('Message class "%s" must implement the "%s" interface', $class, MessageInterface::class));
+        }
+
+        if ($this->getAuthorizedSourcesForMessageClass($class) === []) {
+            throw new \InvalidArgumentException(\sprintf('Message class "%s" must have an "%s" attribute with at least one source', $class, AuthorizedSources::class));
+        }
+
         /** @psalm-suppress InvalidPropertyAssignmentValue */
         $this->subscribers[$class][\spl_object_id($closure)] = $closure;
         $this->recomputeAllowedClasses();
@@ -187,6 +195,10 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
      */
     public function unsubscribe(string $class, \Closure $closure): void
     {
+        if (!\is_subclass_of($class, MessageInterface::class)) {
+            throw new \InvalidArgumentException(\sprintf('Message class "%s" must implement the "%s" interface', $class, MessageInterface::class));
+        }
+
         unset($this->subscribers[$class][\spl_object_id($closure)]);
         if ($this->subscribers[$class] === []) {
             unset($this->subscribers[$class]);
@@ -235,8 +247,8 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
     {
         $subscribers = &$this->subscribers;
 
-        $authorizedSources = $this->getAuthorizedSourcesForMessage($message);
-        if ($authorizedSources !== [] && !\in_array($context->source, $authorizedSources, true)) {
+        $authorizedSources = $this->getAuthorizedSourcesForMessageClass($message::class);
+        if (!\in_array($context->source, $authorizedSources, true)) {
             return Future::complete(new MessageBusResponse(error: 'Permission denied'));
         }
 
@@ -268,16 +280,20 @@ final class SocketFileMessageHandler implements MessageHandlerInterface, Message
         });
     }
 
-    private function getAuthorizedSourcesForMessage(MessageInterface $message): array
+    /**
+     * @param class-string<MessageInterface> $messageClass
+     * @return array<MessageSource>
+     */
+    private function getAuthorizedSourcesForMessageClass(string $messageClass): array
     {
-        if (isset($this->authorizedSourcesForMessage[$message::class])) {
-            return $this->authorizedSourcesForMessage[$message::class];
+        if (isset($this->authorizedSourcesForMessage[$messageClass])) {
+            return $this->authorizedSourcesForMessage[$messageClass];
         }
 
-        $authorizedSourcesAttr = (new \ReflectionClass($message::class))->getAttributes(AuthorizedSources::class)[0] ?? null;
+        $authorizedSourcesAttr = (new \ReflectionClass($messageClass))->getAttributes(AuthorizedSources::class)[0] ?? null;
         $sources = $authorizedSourcesAttr?->newInstance()->sources ?? [];
 
-        return $this->authorizedSourcesForMessage[$message::class] = $sources;
+        return $this->authorizedSourcesForMessage[$messageClass] = $sources;
     }
 
     private function recomputeAllowedClasses(): void
